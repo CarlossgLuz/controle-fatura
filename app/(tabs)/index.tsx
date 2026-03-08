@@ -1,98 +1,171 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
-
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 export default function HomeScreen() {
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
+    <View style={styles.screen}>
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        <Text style={styles.greeting}>Controle de fatura</Text>
+        <Text style={styles.title}>Visão geral</Text>
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+        <View style={styles.invoiceCard}>
+          <Text style={styles.cardLabel}>Fatura atual</Text>
+          <Text style={styles.cardAmount}>R$ 1.248,70</Text>
+          <View style={styles.invoiceRow}>
+            <Text style={styles.cardMeta}>Vencimento: 20/03</Text>
+            <Text style={styles.cardMeta}>Limite: R$ 5.000,00</Text>
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Resumo do ciclo</Text>
+          <View style={styles.summaryGrid}>
+            <View style={styles.summaryItem}>
+              <Text style={styles.summaryLabel}>Total gasto</Text>
+              <Text style={styles.summaryValue}>R$ 1.248,70</Text>
+            </View>
+            <View style={styles.summaryItem}>
+              <Text style={styles.summaryLabel}>Disponível</Text>
+              <Text style={styles.summaryValue}>R$ 3.751,30</Text>
+            </View>
+            <View style={styles.summaryItem}>
+              <Text style={styles.summaryLabel}>Compras</Text>
+              <Text style={styles.summaryValue}>0 este ciclo</Text>
+            </View>
+            <View style={styles.summaryItem}>
+              <Text style={styles.summaryLabel}>Fechamento</Text>
+              <Text style={styles.summaryValue}>15/03</Text>
+            </View>
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Últimos lançamentos</Text>
+          <View style={styles.emptyCard}>
+            <Text style={styles.emptyTitle}>Sem lançamentos por enquanto</Text>
+            <Text style={styles.emptyText}>
+              Assim que você registrar compras, elas aparecem aqui com data e valor.
+            </Text>
+          </View>
+        </View>
+
+        <Pressable style={styles.ctaButton}>
+          <Text style={styles.ctaText}>Adicionar compra</Text>
+        </Pressable>
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
+  screen: {
+    flex: 1,
+    backgroundColor: '#070A13',
+  },
+  content: {
+    paddingHorizontal: 20,
+    paddingTop: 18,
+    paddingBottom: 36,
+    gap: 18,
+  },
+  greeting: {
+    color: '#7C8798',
+    fontSize: 13,
+    letterSpacing: 0.3,
+  },
+  title: {
+    color: '#F2F4F8',
+    fontSize: 30,
+    fontWeight: '700',
+    marginTop: 2,
+  },
+  invoiceCard: {
+    backgroundColor: '#111827',
+    borderRadius: 18,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: '#1F2937',
+    gap: 10,
+  },
+  cardLabel: {
+    color: '#9CA3AF',
+    fontSize: 13,
+  },
+  cardAmount: {
+    color: '#F8FAFC',
+    fontSize: 32,
+    fontWeight: '700',
+    letterSpacing: 0.2,
+  },
+  invoiceRow: {
+    marginTop: 2,
     flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  cardMeta: {
+    color: '#94A3B8',
+    fontSize: 12,
+  },
+  section: {
+    gap: 10,
+  },
+  sectionTitle: {
+    color: '#E5E7EB',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  summaryGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  summaryItem: {
+    width: '48%',
+    backgroundColor: '#0F172A',
+    borderWidth: 1,
+    borderColor: '#1E293B',
+    borderRadius: 14,
+    padding: 12,
+    gap: 4,
+  },
+  summaryLabel: {
+    color: '#94A3B8',
+    fontSize: 12,
+  },
+  summaryValue: {
+    color: '#F1F5F9',
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  emptyCard: {
+    backgroundColor: '#0B1222',
+    borderColor: '#1E2A41',
+    borderWidth: 1,
+    borderRadius: 14,
+    padding: 14,
+    gap: 6,
+  },
+  emptyTitle: {
+    color: '#E2E8F0',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  emptyText: {
+    color: '#94A3B8',
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  ctaButton: {
+    marginTop: 6,
+    backgroundColor: '#E5E7EB',
+    borderRadius: 12,
+    height: 48,
     alignItems: 'center',
-    gap: 8,
+    justifyContent: 'center',
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
-  },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  ctaText: {
+    color: '#0B1120',
+    fontSize: 15,
+    fontWeight: '700',
   },
 });
