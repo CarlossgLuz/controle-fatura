@@ -1,22 +1,25 @@
-import type { MetaMensal, TipoRecorrencia } from '@/domain/finance/types';
+import type { CardConfig, CardId, MonthKey } from '@/domain/finance/types';
 
-export function ehRecorrente(tipo: TipoRecorrencia): boolean {
-  return tipo === 'recorrente';
+export function isValidAmount(amount: number): boolean {
+  return Number.isFinite(amount) && amount > 0;
 }
 
-export function validarMetaMensal(valor: number): boolean {
-  return Number.isFinite(valor) && valor >= 0;
+export function isValidDayOfMonth(day: number): boolean {
+  return Number.isInteger(day) && day >= 1 && day <= 31;
 }
 
-export function criarMetaMensal(valor: number, mesReferencia: `${number}-${number}`): MetaMensal {
-  if (!validarMetaMensal(valor)) {
-    throw new Error('Meta mensal inválida.');
+export function isValidMonthKey(month: string): month is MonthKey {
+  return /^\d{4}-\d{2}$/.test(month);
+}
+
+export function assertSingleCard(cardId: CardId, config: CardConfig): void {
+  if (cardId !== config.id) {
+    throw new Error('Apenas um cartão é permitido neste app.');
   }
+}
 
-  return {
-    id: 'meta-mensal',
-    valor,
-    mesReferencia,
-    atualizadaEm: new Date().toISOString(),
-  };
+export function assertNonEmptyText(value: string, label: string): void {
+  if (value.trim().length === 0) {
+    throw new Error(`${label} é obrigatório.`);
+  }
 }
