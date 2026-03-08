@@ -5,3 +5,4 @@ export * from '@/domain/finance/transaction-ops';
 export * from '@/domain/finance/recurring-ops';
 export * from '@/domain/finance/budget-ops';
 export * from '@/domain/finance/categories';
+export * from '@/domain/finance/dashboard';
