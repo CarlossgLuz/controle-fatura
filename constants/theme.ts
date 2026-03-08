@@ -1,31 +1,110 @@
-/**
- * Below are the colors that are used in the app. The colors are defined in the light and dark mode.
- * There are many other ways to style your app. For example, [Nativewind](https://www.nativewind.dev/), [Tamagui](https://tamagui.dev/), [unistyles](https://reactnativeunistyles.vercel.app), etc.
- */
-
 import { Platform } from 'react-native';
 
-const tintColorLight = '#0a7ea4';
-const tintColorDark = '#fff';
+export type ThemeMode = 'light' | 'dark';
 
-export const Colors = {
+export type ColorTokens = {
+  background: string;
+  surface: string;
+  surfaceElevated: string;
+  primary: string;
+  secondary: string;
+  success: string;
+  warning: string;
+  danger: string;
+  textPrimary: string;
+  textSecondary: string;
+  textMuted: string;
+  border: string;
+};
+
+type LegacyColorShape = {
+  text: string;
+  background: string;
+  tint: string;
+  icon: string;
+  tabIconDefault: string;
+  tabIconSelected: string;
+} & ColorTokens;
+
+const darkTokens: ColorTokens = {
+  background: '#070A13',
+  surface: '#0F172A',
+  surfaceElevated: '#111C33',
+  primary: '#7DD3FC',
+  secondary: '#F8FAFC',
+  success: '#34D399',
+  warning: '#FBBF24',
+  danger: '#F87171',
+  textPrimary: '#F8FAFC',
+  textSecondary: '#CBD5E1',
+  textMuted: '#94A3B8',
+  border: '#1E293B',
+};
+
+const lightTokens: ColorTokens = {
+  background: '#F2F4F8',
+  surface: '#FFFFFF',
+  surfaceElevated: '#F8FAFC',
+  primary: '#0369A1',
+  secondary: '#0F172A',
+  success: '#059669',
+  warning: '#D97706',
+  danger: '#DC2626',
+  textPrimary: '#0F172A',
+  textSecondary: '#334155',
+  textMuted: '#64748B',
+  border: '#CBD5E1',
+};
+
+export const Colors: Record<ThemeMode, LegacyColorShape> = {
   light: {
-    text: '#11181C',
-    background: '#fff',
-    tint: tintColorLight,
-    icon: '#687076',
-    tabIconDefault: '#687076',
-    tabIconSelected: tintColorLight,
+    ...lightTokens,
+    text: lightTokens.textPrimary,
+    tint: lightTokens.primary,
+    icon: lightTokens.textMuted,
+    tabIconDefault: lightTokens.textMuted,
+    tabIconSelected: lightTokens.primary,
   },
   dark: {
-    text: '#ECEDEE',
-    background: '#151718',
-    tint: tintColorDark,
-    icon: '#9BA1A6',
-    tabIconDefault: '#9BA1A6',
-    tabIconSelected: tintColorDark,
+    ...darkTokens,
+    text: darkTokens.textPrimary,
+    tint: darkTokens.primary,
+    icon: darkTokens.textMuted,
+    tabIconDefault: darkTokens.textMuted,
+    tabIconSelected: darkTokens.primary,
   },
 };
+
+export const Spacing = {
+  xs: 4,
+  sm: 8,
+  md: 12,
+  lg: 16,
+  xl: 20,
+  xxl: 24,
+};
+
+export const Radius = {
+  sm: 10,
+  md: 14,
+  lg: 18,
+  xl: 22,
+  pill: 999,
+};
+
+export const Shadows = {
+  card: {
+    shadowColor: '#000000',
+    shadowOpacity: 0.24,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 7 },
+    elevation: 4,
+  },
+};
+
+export function getColorTokens(mode: ThemeMode): ColorTokens {
+  return mode === 'dark' ? darkTokens : lightTokens;
+}
 
 export const Fonts = Platform.select({
   ios: {

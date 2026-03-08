@@ -1,10 +1,13 @@
 import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { excluirCompra, listarComprasDoCicloAtual } from '@/data/sqlite';
 import { calcularCicloAtual, CARTAO_PADRAO, resumirComprasDoCiclo, type Compra } from '@/domain';
+import { Radius, Shadows, Spacing } from '@/constants/theme';
+import { useAppTheme } from '@/hooks/use-app-theme';
 
 function formatCurrency(value: number): string {
   return value.toLocaleString('pt-BR', {
@@ -20,6 +23,8 @@ function formatDate(isoDate: string): string {
 
 export default function HomeScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const { mode, colors } = useAppTheme();
 
   const [compras, setCompras] = useState<Compra[]>([]);
   const [loading, setLoading] = useState(true);
@@ -53,7 +58,7 @@ export default function HomeScreen() {
     () => calcularCicloAtual(referenciaCiclo, CARTAO_PADRAO),
     [referenciaCiclo]
   );
-  const ultimosLancamentos = useMemo(() => compras.slice(0, 5), [compras]);
+  const ultimosLancamentos = useMemo(() => compras.slice(0, 6), [compras]);
 
   const onDelete = useCallback(
     async (id: string) => {
@@ -67,11 +72,31 @@ export default function HomeScreen() {
     [loadCompras]
   );
 
+  const askDelete = useCallback(
+    (compra: Compra) => {
+      Alert.alert('Excluir lançamento', `Deseja excluir "${compra.titulo}"?`, [
+        { text: 'Cancelar', style: 'cancel' },
+        { text: 'Excluir', style: 'destructive', onPress: () => onDelete(compra.id) },
+      ]);
+    },
+    [onDelete]
+  );
+
+  const styles = useMemo(
+    () => createStyles(colors, insets.bottom, mode === 'dark'),
+    [colors, insets.bottom, mode]
+  );
+
   return (
-    <View style={styles.screen}>
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <Text style={styles.greeting}>Controle de fatura</Text>
-        <Text style={styles.title}>Visão geral</Text>
+    <SafeAreaView style={styles.screen} edges={['top']}>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled">
+        <View style={styles.header}>
+          <Text style={styles.greeting}>Controle de fatura</Text>
+          <Text style={styles.title}>Visão geral</Text>
+        </View>
 
         <View style={styles.invoiceCard}>
           <Text style={styles.cardLabel}>Fatura atual</Text>
@@ -99,7 +124,9 @@ export default function HomeScreen() {
             </View>
             <View style={styles.summaryItem}>
               <Text style={styles.summaryLabel}>Período</Text>
-              <Text style={styles.summaryValue}>{formatDate(cicloAtual.inicio)} - {formatDate(cicloAtual.fim)}</Text>
+              <Text style={styles.summaryValue}>
+                {formatDate(cicloAtual.inicio)} - {formatDate(cicloAtual.fim)}
+              </Text>
             </View>
           </View>
         </View>
@@ -108,13 +135,13 @@ export default function HomeScreen() {
           <Text style={styles.sectionTitle}>Últimos lançamentos</Text>
           {loading ? (
             <View style={styles.emptyCard}>
-              <Text style={styles.emptyTitle}>Carregando...</Text>
+              <Text style={styles.emptyTitle}>Carregando lançamentos...</Text>
             </View>
           ) : ultimosLancamentos.length === 0 ? (
             <View style={styles.emptyCard}>
-              <Text style={styles.emptyTitle}>Sem lançamentos por enquanto</Text>
+              <Text style={styles.emptyTitle}>Nenhuma compra no ciclo</Text>
               <Text style={styles.emptyText}>
-                Assim que você registrar compras, elas aparecem aqui com data e valor.
+                Registre um lançamento para começar a acompanhar esta fatura.
               </Text>
             </View>
           ) : (
@@ -133,9 +160,18 @@ export default function HomeScreen() {
                       {compra.parcela ? ` • ${compra.parcela.atual}/${compra.parcela.total}` : ''}
                     </Text>
                   </Pressable>
-                  <Pressable style={styles.deleteButton} onPress={() => onDelete(compra.id)}>
-                    <Text style={styles.deleteButtonText}>Excluir</Text>
-                  </Pressable>
+                  <View style={styles.launchActions}>
+                    <Pressable
+                      style={styles.editButton}
+                      onPress={() =>
+                        router.push({ pathname: '/compra', params: { id: compra.id } })
+                      }>
+                      <Text style={styles.editButtonText}>Editar</Text>
+                    </Pressable>
+                    <Pressable style={styles.deleteButton} onPress={() => askDelete(compra)}>
+                      <Text style={styles.deleteButtonText}>Excluir</Text>
+                    </Pressable>
+                  </View>
                 </View>
               ))}
             </View>
@@ -148,172 +184,197 @@ export default function HomeScreen() {
           <Text style={styles.ctaText}>Adicionar compra</Text>
         </Pressable>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: '#070A13',
-  },
-  content: {
-    paddingHorizontal: 20,
-    paddingTop: 18,
-    paddingBottom: 36,
-    gap: 18,
-  },
-  greeting: {
-    color: '#7C8798',
-    fontSize: 13,
-    letterSpacing: 0.3,
-  },
-  title: {
-    color: '#F2F4F8',
-    fontSize: 30,
-    fontWeight: '700',
-    marginTop: 2,
-  },
-  invoiceCard: {
-    backgroundColor: '#111827',
-    borderRadius: 18,
-    padding: 18,
-    borderWidth: 1,
-    borderColor: '#1F2937',
-    gap: 10,
-  },
-  cardLabel: {
-    color: '#9CA3AF',
-    fontSize: 13,
-  },
-  cardAmount: {
-    color: '#F8FAFC',
-    fontSize: 32,
-    fontWeight: '700',
-    letterSpacing: 0.2,
-  },
-  invoiceRow: {
-    marginTop: 2,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 12,
-  },
-  cardMeta: {
-    color: '#94A3B8',
-    fontSize: 12,
-  },
-  section: {
-    gap: 10,
-  },
-  sectionTitle: {
-    color: '#E5E7EB',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  summaryGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-  },
-  summaryItem: {
-    width: '48%',
-    backgroundColor: '#0F172A',
-    borderWidth: 1,
-    borderColor: '#1E293B',
-    borderRadius: 14,
-    padding: 12,
-    gap: 4,
-  },
-  summaryLabel: {
-    color: '#94A3B8',
-    fontSize: 12,
-  },
-  summaryValue: {
-    color: '#F1F5F9',
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  list: {
-    gap: 10,
-  },
-  launchItem: {
-    backgroundColor: '#0B1222',
-    borderColor: '#1E2A41',
-    borderWidth: 1,
-    borderRadius: 14,
-    padding: 12,
-    gap: 10,
-  },
-  launchContent: {
-    gap: 5,
-  },
-  launchTopRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 10,
-  },
-  launchTitle: {
-    flex: 1,
-    color: '#E2E8F0',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  launchAmount: {
-    color: '#E2E8F0',
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  launchMeta: {
-    color: '#94A3B8',
-    fontSize: 12,
-  },
-  deleteButton: {
-    alignSelf: 'flex-start',
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#7F1D1D',
-    backgroundColor: '#2A1010',
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-  },
-  deleteButtonText: {
-    color: '#FCA5A5',
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  emptyCard: {
-    backgroundColor: '#0B1222',
-    borderColor: '#1E2A41',
-    borderWidth: 1,
-    borderRadius: 14,
-    padding: 14,
-    gap: 6,
-  },
-  emptyTitle: {
-    color: '#E2E8F0',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  emptyText: {
-    color: '#94A3B8',
-    fontSize: 13,
-    lineHeight: 18,
-  },
-  errorText: {
-    color: '#FCA5A5',
-    fontSize: 13,
-  },
-  ctaButton: {
-    marginTop: 6,
-    backgroundColor: '#E5E7EB',
-    borderRadius: 12,
-    height: 48,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  ctaText: {
-    color: '#0B1120',
-    fontSize: 15,
-    fontWeight: '700',
-  },
-});
+function createStyles(
+  colors: ReturnType<typeof useAppTheme>['colors'],
+  bottomInset: number,
+  isDarkMode: boolean
+) {
+  return StyleSheet.create({
+    screen: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    content: {
+      paddingHorizontal: Spacing.xl,
+      paddingTop: Spacing.md,
+      paddingBottom: bottomInset + 104,
+      gap: Spacing.lg,
+    },
+    header: {
+      gap: Spacing.xs,
+    },
+    greeting: {
+      color: colors.textMuted,
+      fontSize: 13,
+      letterSpacing: 0.3,
+    },
+    title: {
+      color: colors.textPrimary,
+      fontSize: 30,
+      fontWeight: '700',
+    },
+    invoiceCard: {
+      backgroundColor: colors.surfaceElevated,
+      borderRadius: Radius.lg,
+      padding: Spacing.lg,
+      borderWidth: 1,
+      borderColor: colors.border,
+      gap: Spacing.sm,
+      ...Shadows.card,
+    },
+    cardLabel: {
+      color: colors.textMuted,
+      fontSize: 13,
+    },
+    cardAmount: {
+      color: colors.textPrimary,
+      fontSize: 32,
+      fontWeight: '700',
+      letterSpacing: 0.2,
+    },
+    invoiceRow: {
+      marginTop: 2,
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      gap: Spacing.md,
+    },
+    cardMeta: {
+      color: colors.textSecondary,
+      fontSize: 12,
+    },
+    section: {
+      gap: Spacing.sm,
+    },
+    sectionTitle: {
+      color: colors.textPrimary,
+      fontSize: 16,
+      fontWeight: '600',
+    },
+    summaryGrid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: Spacing.sm,
+    },
+    summaryItem: {
+      width: '48%',
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: Radius.md,
+      padding: Spacing.md,
+      gap: Spacing.xs,
+    },
+    summaryLabel: {
+      color: colors.textMuted,
+      fontSize: 12,
+    },
+    summaryValue: {
+      color: colors.textPrimary,
+      fontSize: 15,
+      fontWeight: '600',
+    },
+    list: {
+      gap: Spacing.sm,
+    },
+    launchItem: {
+      backgroundColor: colors.surface,
+      borderColor: colors.border,
+      borderWidth: 1,
+      borderRadius: Radius.md,
+      padding: Spacing.md,
+      gap: Spacing.sm,
+    },
+    launchContent: {
+      gap: Spacing.xs,
+    },
+    launchTopRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      gap: Spacing.sm,
+    },
+    launchTitle: {
+      flex: 1,
+      color: colors.textPrimary,
+      fontSize: 14,
+      fontWeight: '600',
+    },
+    launchAmount: {
+      color: colors.secondary,
+      fontSize: 14,
+      fontWeight: '700',
+    },
+    launchMeta: {
+      color: colors.textMuted,
+      fontSize: 12,
+    },
+    launchActions: {
+      flexDirection: 'row',
+      gap: Spacing.sm,
+    },
+    editButton: {
+      borderRadius: Radius.sm,
+      borderWidth: 1,
+      borderColor: colors.border,
+      backgroundColor: colors.surfaceElevated,
+      paddingHorizontal: Spacing.md,
+      paddingVertical: 8,
+    },
+    editButtonText: {
+      color: colors.textSecondary,
+      fontSize: 12,
+      fontWeight: '600',
+    },
+    deleteButton: {
+      borderRadius: Radius.sm,
+      borderWidth: 1,
+      borderColor: colors.danger,
+      backgroundColor: `${colors.danger}22`,
+      paddingHorizontal: Spacing.md,
+      paddingVertical: 8,
+    },
+    deleteButtonText: {
+      color: colors.danger,
+      fontSize: 12,
+      fontWeight: '600',
+    },
+    emptyCard: {
+      backgroundColor: colors.surface,
+      borderColor: colors.border,
+      borderWidth: 1,
+      borderRadius: Radius.md,
+      padding: Spacing.lg,
+      gap: Spacing.xs,
+    },
+    emptyTitle: {
+      color: colors.textPrimary,
+      fontSize: 14,
+      fontWeight: '600',
+    },
+    emptyText: {
+      color: colors.textMuted,
+      fontSize: 13,
+      lineHeight: 18,
+    },
+    errorText: {
+      color: colors.danger,
+      fontSize: 13,
+    },
+    ctaButton: {
+      marginTop: Spacing.xs,
+      backgroundColor: colors.primary,
+      borderRadius: Radius.md,
+      height: 50,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    ctaText: {
+      color: isDarkMode ? '#03111B' : '#FFFFFF',
+      fontSize: 15,
+      fontWeight: '700',
+    },
+  });
+}

@@ -10,7 +10,9 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { criarEInserirCompra, editarCompra, obterCompraPorId } from '@/data/sqlite';
 import {
   CATEGORIAS_COMPRA,
   buildDefaultCompraFormValues,
@@ -19,7 +21,8 @@ import {
   type CompraFormErrors,
   type CompraFormValues,
 } from '@/domain';
-import { criarEInserirCompra, editarCompra, obterCompraPorId } from '@/data/sqlite';
+import { Radius, Spacing } from '@/constants/theme';
+import { useAppTheme } from '@/hooks/use-app-theme';
 
 function gerarIdCompra(): string {
   return `cmp_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
@@ -40,9 +43,15 @@ function labelCategoria(categoria: CategoriaCompra): string {
   return labels[categoria];
 }
 
-function ErrorText({ message }: { message?: string }) {
+function ErrorText({
+  message,
+  color,
+}: {
+  message?: string;
+  color: string;
+}) {
   if (!message) return null;
-  return <Text style={styles.errorText}>{message}</Text>;
+  return <Text style={[styles.errorText, { color }]}>{message}</Text>;
 }
 
 export default function CompraScreen() {
@@ -50,6 +59,9 @@ export default function CompraScreen() {
   const params = useLocalSearchParams<{ id?: string }>();
   const compraId = typeof params.id === 'string' ? params.id : undefined;
   const isEdit = Boolean(compraId);
+
+  const insets = useSafeAreaInsets();
+  const { mode, colors } = useAppTheme();
 
   const [form, setForm] = useState<CompraFormValues>(() => buildDefaultCompraFormValues());
   const [errors, setErrors] = useState<CompraFormErrors>({});
@@ -98,10 +110,24 @@ export default function CompraScreen() {
   }, [compraId, isEdit]);
 
   const title = useMemo(() => (isEdit ? 'Editar compra' : 'Nova compra'), [isEdit]);
+  const subtitle = isEdit
+    ? 'Atualize os campos e mantenha o ciclo de fatura consistente.'
+    : 'Preencha os dados da compra para registrar no ciclo correto.';
+
+  const themedStyles = useMemo(
+    () => createThemedStyles(colors, insets.top, insets.bottom, mode === 'dark'),
+    [colors, insets.bottom, insets.top, mode]
+  );
 
   const onField = <K extends keyof CompraFormValues>(key: K, value: CompraFormValues[K]) => {
     setForm((prev) => ({ ...prev, [key]: value }));
-    if (key === 'valor' || key === 'dataCompra' || key === 'titulo' || key === 'local' || key === 'categoria') {
+    if (
+      key === 'valor' ||
+      key === 'dataCompra' ||
+      key === 'titulo' ||
+      key === 'local' ||
+      key === 'categoria'
+    ) {
       setErrors((prev) => ({ ...prev, [key]: undefined }));
     }
     if (key === 'parcelaAtual' || key === 'parcelaTotal') {
@@ -143,123 +169,131 @@ export default function CompraScreen() {
   };
 
   return (
-    <View style={styles.screen}>
+    <View style={themedStyles.screen}>
       <KeyboardAvoidingView
-        style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={8}>
-        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-          <View style={styles.header}>
-            <Pressable onPress={() => router.back()} style={styles.backButton}>
-              <Text style={styles.backText}>Voltar</Text>
+        style={themedStyles.flex}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={insets.top + 8}>
+        <ScrollView
+          contentContainerStyle={themedStyles.content}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}>
+          <View style={themedStyles.header}>
+            <Pressable onPress={() => router.back()} style={themedStyles.backButton}>
+              <Text style={themedStyles.backText}>Voltar</Text>
             </Pressable>
-            <Text style={styles.title}>{title}</Text>
-            <Text style={styles.subtitle}>Cadastre compras com ciclo de fatura automático.</Text>
+            <Text style={themedStyles.title}>{title}</Text>
+            <Text style={themedStyles.subtitle}>{subtitle}</Text>
           </View>
 
           {loading ? (
-            <View style={styles.card}>
-              <Text style={styles.loadingText}>Carregando compra...</Text>
+            <View style={themedStyles.card}>
+              <Text style={themedStyles.loadingText}>Carregando compra...</Text>
             </View>
           ) : (
-            <View style={styles.card}>
-              <Text style={styles.label}>Valor *</Text>
+            <View style={themedStyles.card}>
+              <Text style={themedStyles.label}>Valor *</Text>
               <TextInput
                 value={form.valor}
                 onChangeText={(value) => onField('valor', value)}
                 placeholder="0,00"
-                placeholderTextColor="#5E6B84"
+                placeholderTextColor={colors.textMuted}
                 keyboardType="decimal-pad"
-                style={styles.input}
+                returnKeyType="next"
+                style={themedStyles.input}
               />
-              <ErrorText message={errors.valor} />
+              <ErrorText message={errors.valor} color={colors.danger} />
 
-              <Text style={styles.label}>Data da compra (YYYY-MM-DD) *</Text>
+              <Text style={themedStyles.label}>Data da compra (YYYY-MM-DD) *</Text>
               <TextInput
                 value={form.dataCompra}
                 onChangeText={(value) => onField('dataCompra', value)}
                 placeholder="2026-03-08"
-                placeholderTextColor="#5E6B84"
-                style={styles.input}
+                placeholderTextColor={colors.textMuted}
+                returnKeyType="next"
+                style={themedStyles.input}
               />
-              <ErrorText message={errors.dataCompra} />
+              <ErrorText message={errors.dataCompra} color={colors.danger} />
 
-              <Text style={styles.label}>Título *</Text>
+              <Text style={themedStyles.label}>Título *</Text>
               <TextInput
                 value={form.titulo}
                 onChangeText={(value) => onField('titulo', value)}
                 placeholder="Ex: Mercado do mês"
-                placeholderTextColor="#5E6B84"
-                style={styles.input}
+                placeholderTextColor={colors.textMuted}
+                returnKeyType="next"
+                style={themedStyles.input}
               />
-              <ErrorText message={errors.titulo} />
+              <ErrorText message={errors.titulo} color={colors.danger} />
 
-              <Text style={styles.label}>Descrição (opcional)</Text>
+              <Text style={themedStyles.label}>Descrição (opcional)</Text>
               <TextInput
                 value={form.descricao}
                 onChangeText={(value) => onField('descricao', value)}
                 placeholder="Detalhes da compra"
-                placeholderTextColor="#5E6B84"
-                style={[styles.input, styles.inputMultiline]}
+                placeholderTextColor={colors.textMuted}
+                style={[themedStyles.input, themedStyles.inputMultiline]}
                 multiline
               />
 
-              <Text style={styles.label}>Local *</Text>
+              <Text style={themedStyles.label}>Local *</Text>
               <TextInput
                 value={form.local}
                 onChangeText={(value) => onField('local', value)}
                 placeholder="Ex: Supermercado Central"
-                placeholderTextColor="#5E6B84"
-                style={styles.input}
+                placeholderTextColor={colors.textMuted}
+                returnKeyType="next"
+                style={themedStyles.input}
               />
-              <ErrorText message={errors.local} />
+              <ErrorText message={errors.local} color={colors.danger} />
 
-              <Text style={styles.label}>Categoria *</Text>
-              <View style={styles.chips}>
+              <Text style={themedStyles.label}>Categoria *</Text>
+              <View style={themedStyles.chips}>
                 {CATEGORIAS_COMPRA.map((categoria) => {
                   const active = form.categoria === categoria;
                   return (
                     <Pressable
                       key={categoria}
-                      style={[styles.chip, active && styles.chipActive]}
+                      style={[themedStyles.chip, active && themedStyles.chipActive]}
                       onPress={() => onField('categoria', categoria)}>
-                      <Text style={[styles.chipText, active && styles.chipTextActive]}>
+                      <Text style={[themedStyles.chipText, active && themedStyles.chipTextActive]}>
                         {labelCategoria(categoria)}
                       </Text>
                     </Pressable>
                   );
                 })}
               </View>
-              <ErrorText message={errors.categoria} />
+              <ErrorText message={errors.categoria} color={colors.danger} />
 
-              <Text style={styles.label}>Parcela (opcional)</Text>
-              <View style={styles.installmentRow}>
+              <Text style={themedStyles.label}>Parcela (opcional)</Text>
+              <View style={themedStyles.installmentRow}>
                 <TextInput
                   value={form.parcelaAtual}
                   onChangeText={(value) => onField('parcelaAtual', value)}
                   placeholder="Atual"
-                  placeholderTextColor="#5E6B84"
+                  placeholderTextColor={colors.textMuted}
                   keyboardType="number-pad"
-                  style={[styles.input, styles.installmentInput]}
+                  style={[themedStyles.input, themedStyles.installmentInput]}
                 />
                 <TextInput
                   value={form.parcelaTotal}
                   onChangeText={(value) => onField('parcelaTotal', value)}
                   placeholder="Total"
-                  placeholderTextColor="#5E6B84"
+                  placeholderTextColor={colors.textMuted}
                   keyboardType="number-pad"
-                  style={[styles.input, styles.installmentInput]}
+                  style={[themedStyles.input, themedStyles.installmentInput]}
                 />
               </View>
-              <ErrorText message={errors.parcela} />
+              <ErrorText message={errors.parcela} color={colors.danger} />
 
-              {formError ? <Text style={styles.formError}>{formError}</Text> : null}
+              {formError ? <Text style={themedStyles.formError}>{formError}</Text> : null}
 
               <Pressable
-                style={[styles.saveButton, saving && styles.saveButtonDisabled]}
+                style={[themedStyles.saveButton, saving && themedStyles.saveButtonDisabled]}
                 onPress={onSave}
                 disabled={saving}>
-                <Text style={styles.saveButtonText}>
+                <Text style={themedStyles.saveButtonText}>
                   {saving ? 'Salvando...' : isEdit ? 'Salvar alterações' : 'Salvar compra'}
                 </Text>
               </Pressable>
@@ -271,134 +305,149 @@ export default function CompraScreen() {
   );
 }
 
+function createThemedStyles(
+  colors: ReturnType<typeof useAppTheme>['colors'],
+  topInset: number,
+  bottomInset: number,
+  isDarkMode: boolean
+) {
+  return StyleSheet.create({
+    screen: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    flex: {
+      flex: 1,
+    },
+    content: {
+      paddingHorizontal: Spacing.xl,
+      paddingTop: topInset + Spacing.sm,
+      paddingBottom: bottomInset + Spacing.xxl,
+      gap: Spacing.lg,
+    },
+    header: {
+      gap: Spacing.xs,
+    },
+    backButton: {
+      alignSelf: 'flex-start',
+      backgroundColor: colors.surface,
+      borderColor: colors.border,
+      borderWidth: 1,
+      borderRadius: Radius.sm,
+      paddingHorizontal: Spacing.md,
+      paddingVertical: Spacing.sm,
+      marginBottom: Spacing.xs,
+    },
+    backText: {
+      color: colors.textSecondary,
+      fontSize: 13,
+      fontWeight: '600',
+    },
+    title: {
+      color: colors.textPrimary,
+      fontSize: 28,
+      fontWeight: '700',
+    },
+    subtitle: {
+      color: colors.textMuted,
+      fontSize: 13,
+      lineHeight: 19,
+    },
+    card: {
+      backgroundColor: colors.surface,
+      borderColor: colors.border,
+      borderWidth: 1,
+      borderRadius: Radius.lg,
+      padding: Spacing.lg,
+      gap: Spacing.sm,
+    },
+    loadingText: {
+      color: colors.textSecondary,
+      fontSize: 14,
+    },
+    label: {
+      color: colors.textSecondary,
+      fontSize: 13,
+      marginTop: Spacing.xs,
+    },
+    input: {
+      backgroundColor: colors.surfaceElevated,
+      borderColor: colors.border,
+      borderWidth: 1,
+      borderRadius: Radius.md,
+      color: colors.textPrimary,
+      fontSize: 15,
+      paddingHorizontal: Spacing.md,
+      paddingVertical: 12,
+    },
+    inputMultiline: {
+      minHeight: 88,
+      textAlignVertical: 'top',
+    },
+    chips: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: Spacing.sm,
+      marginTop: Spacing.xs,
+    },
+    chip: {
+      backgroundColor: colors.surfaceElevated,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: Radius.pill,
+      paddingHorizontal: 11,
+      paddingVertical: 7,
+    },
+    chipActive: {
+      backgroundColor: colors.primary,
+      borderColor: colors.primary,
+    },
+    chipText: {
+      color: colors.textSecondary,
+      fontSize: 12,
+      fontWeight: '600',
+    },
+    chipTextActive: {
+      color: isDarkMode ? '#03111B' : '#FFFFFF',
+    },
+    installmentRow: {
+      flexDirection: 'row',
+      gap: Spacing.sm,
+    },
+    installmentInput: {
+      flex: 1,
+    },
+    errorText: {
+      fontSize: 12,
+      marginTop: -1,
+    },
+    formError: {
+      color: colors.danger,
+      fontSize: 13,
+      marginTop: Spacing.sm,
+    },
+    saveButton: {
+      backgroundColor: colors.primary,
+      borderRadius: Radius.md,
+      minHeight: 50,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginTop: Spacing.md,
+    },
+    saveButtonDisabled: {
+      opacity: 0.7,
+    },
+    saveButtonText: {
+      color: isDarkMode ? '#03111B' : '#FFFFFF',
+      fontSize: 15,
+      fontWeight: '700',
+    },
+  });
+}
+
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: '#070A13',
-  },
-  flex: {
-    flex: 1,
-  },
-  content: {
-    paddingHorizontal: 20,
-    paddingVertical: 18,
-    gap: 14,
-  },
-  header: {
-    gap: 4,
-  },
-  backButton: {
-    alignSelf: 'flex-start',
-    backgroundColor: '#0F172A',
-    borderColor: '#1E293B',
-    borderWidth: 1,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    marginBottom: 4,
-  },
-  backText: {
-    color: '#D1D5DB',
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  title: {
-    color: '#F8FAFC',
-    fontSize: 28,
-    fontWeight: '700',
-  },
-  subtitle: {
-    color: '#93A0B7',
-    fontSize: 13,
-  },
-  card: {
-    backgroundColor: '#0B1222',
-    borderColor: '#1E2A41',
-    borderWidth: 1,
-    borderRadius: 16,
-    padding: 16,
-    gap: 8,
-  },
-  loadingText: {
-    color: '#A8B4CA',
-    fontSize: 14,
-  },
-  label: {
-    color: '#DDE5F1',
-    fontSize: 13,
-    marginTop: 6,
-  },
-  input: {
-    backgroundColor: '#111C33',
-    borderColor: '#22324C',
-    borderWidth: 1,
-    borderRadius: 12,
-    color: '#F8FAFC',
-    fontSize: 15,
-    paddingHorizontal: 12,
-    paddingVertical: 11,
-  },
-  inputMultiline: {
-    minHeight: 84,
-    textAlignVertical: 'top',
-  },
-  chips: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginTop: 4,
-  },
-  chip: {
-    backgroundColor: '#111827',
-    borderWidth: 1,
-    borderColor: '#1F2937',
-    borderRadius: 999,
-    paddingHorizontal: 11,
-    paddingVertical: 7,
-  },
-  chipActive: {
-    backgroundColor: '#E5E7EB',
-    borderColor: '#E5E7EB',
-  },
-  chipText: {
-    color: '#CBD5E1',
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  chipTextActive: {
-    color: '#111827',
-  },
-  installmentRow: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  installmentInput: {
-    flex: 1,
-  },
   errorText: {
-    color: '#FCA5A5',
     fontSize: 12,
     marginTop: -1,
-  },
-  formError: {
-    color: '#FCA5A5',
-    fontSize: 13,
-    marginTop: 8,
-  },
-  saveButton: {
-    backgroundColor: '#E5E7EB',
-    borderRadius: 12,
-    height: 48,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 10,
-  },
-  saveButtonDisabled: {
-    opacity: 0.7,
-  },
-  saveButtonText: {
-    color: '#0F172A',
-    fontSize: 15,
-    fontWeight: '700',
   },
 });

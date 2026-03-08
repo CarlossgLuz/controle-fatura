@@ -1,10 +1,14 @@
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { initDatabase } from '@/data/sqlite';
+import { useAppTheme } from '@/hooks/use-app-theme';
 
 export default function RootLayout() {
+  const { mode, colors } = useAppTheme();
+
   useEffect(() => {
     initDatabase().catch((error) => {
       console.warn('Erro ao inicializar SQLite:', error);
@@ -12,15 +16,15 @@ export default function RootLayout() {
   }, []);
 
   return (
-    <>
-      <StatusBar style="light" />
+    <SafeAreaProvider>
+      <StatusBar style={mode === 'dark' ? 'light' : 'dark'} />
       <Stack
         screenOptions={{
           headerShown: false,
-          contentStyle: { backgroundColor: '#070A13' },
+          contentStyle: { backgroundColor: colors.background },
           animation: 'fade',
         }}
       />
-    </>
+    </SafeAreaProvider>
   );
 }
