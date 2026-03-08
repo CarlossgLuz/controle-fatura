@@ -7,3 +7,4 @@ export * from '@/domain/finance/budget-ops';
 export * from '@/domain/finance/card-config-ops';
 export * from '@/domain/finance/categories';
 export * from '@/domain/finance/dashboard';
+export * from '@/domain/finance/insights';
