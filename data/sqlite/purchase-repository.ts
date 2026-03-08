@@ -86,7 +86,7 @@ function toUpdateParams(compra: Compra) {
   ];
 }
 
-async function obterCompraPorId(compraId: string): Promise<Compra | null> {
+export async function obterCompraPorId(compraId: string): Promise<Compra | null> {
   const db = await databaseReady();
   const row = await db.getFirstAsync<CompraRow>('SELECT * FROM compras WHERE id = ?;', [compraId]);
   return row ? mapRowToCompra(row) : null;

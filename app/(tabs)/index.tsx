@@ -1,6 +1,9 @@
+import { useRouter } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 export default function HomeScreen() {
+  const router = useRouter();
+
   return (
     <View style={styles.screen}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
@@ -48,7 +51,7 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        <Pressable style={styles.ctaButton}>
+        <Pressable style={styles.ctaButton} onPress={() => router.push('/compra')}>
           <Text style={styles.ctaText}>Adicionar compra</Text>
         </Pressable>
       </ScrollView>
