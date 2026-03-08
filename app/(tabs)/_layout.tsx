@@ -14,14 +14,17 @@ export default function TabLayout() {
 
   return (
     <Tabs
+      initialRouteName="inicio"
       screenOptions={{
         tabBarActiveTintColor: legacyColors.tint,
         tabBarInactiveTintColor: legacyColors.tabIconDefault,
         headerShown: false,
         tabBarButton: HapticTab,
+        tabBarHideOnKeyboard: true,
         tabBarStyle: {
           backgroundColor: colors.surface,
           borderTopColor: colors.border,
+          borderTopWidth: 1,
           height: tabBarHeight,
           paddingTop: Spacing.xs,
           paddingBottom: Math.max(insets.bottom, Spacing.sm),
@@ -46,23 +49,21 @@ export default function TabLayout() {
         name="lancar"
         options={{
           title: 'Lançar',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="paperplane.fill" color={color} />,
+          tabBarIcon: ({ color }) => <IconSymbol size={28} name="plus.circle.fill" color={color} />,
         }}
       />
       <Tabs.Screen
         name="planejamento"
         options={{
           title: 'Planejamento',
-          tabBarIcon: ({ color }) => (
-            <IconSymbol size={28} name="chevron.left.forwardslash.chevron.right" color={color} />
-          ),
+          tabBarIcon: ({ color }) => <IconSymbol size={28} name="calendar.circle.fill" color={color} />,
         }}
       />
       <Tabs.Screen
         name="insights"
         options={{
           title: 'Insights',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="chevron.right" color={color} />,
+          tabBarIcon: ({ color }) => <IconSymbol size={28} name="chart.bar.fill" color={color} />,
         }}
       />
       <Tabs.Screen

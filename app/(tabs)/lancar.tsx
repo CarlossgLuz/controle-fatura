@@ -15,14 +15,13 @@ export default function LancarScreen() {
     <SafeAreaView style={styles.screen} edges={['top']}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <Text style={styles.title}>Lançar</Text>
-        <Text style={styles.subtitle}>Adicionar receita ou gasto fixo de forma rápida.</Text>
+        <Text style={styles.subtitle}>Registre uma movimentação em poucos toques.</Text>
 
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Lançamentos desta etapa</Text>
-          <Text style={styles.cardText}>Base preparada. Fluxos completos serão conectados na próxima etapa.</Text>
-
+          <Text style={styles.cardTitle}>Ação rápida</Text>
+          <Text style={styles.cardText}>Use o fluxo atual para lançar despesa do cartão principal.</Text>
           <Pressable style={styles.primaryButton} onPress={() => router.push('/compra')}>
-            <Text style={styles.primaryButtonText}>Lançar gasto no cartão</Text>
+            <Text style={styles.primaryButtonText}>Novo lançamento</Text>
           </Pressable>
         </View>
       </ScrollView>
@@ -48,7 +47,7 @@ function createStyles(
     },
     title: {
       color: colors.textPrimary,
-      fontSize: 28,
+      fontSize: 30,
       fontWeight: '700',
     },
     subtitle: {

@@ -13,11 +13,12 @@ export default function PlanejamentoScreen() {
     <SafeAreaView style={styles.screen} edges={['top']}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <Text style={styles.title}>Planejamento</Text>
-        <Text style={styles.subtitle}>Meta mensal e gastos fixos recorrentes.</Text>
+        <Text style={styles.subtitle}>Defina meta mensal e configure recorrências.</Text>
 
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Meta mensal</Text>
-          <Text style={styles.cardText}>Estrutura pronta para persistir valor-alvo por mês.</Text>
+          <Text style={styles.cardTitle}>Meta do mês</Text>
+          <Text style={styles.cardValue}>R$ 0,00</Text>
+          <Text style={styles.cardText}>Você poderá ajustar o objetivo mensal por período.</Text>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -38,7 +39,7 @@ function createStyles(colors: ReturnType<typeof useAppTheme>['colors'], bottomIn
     },
     title: {
       color: colors.textPrimary,
-      fontSize: 28,
+      fontSize: 30,
       fontWeight: '700',
     },
     subtitle: {
@@ -55,12 +56,16 @@ function createStyles(colors: ReturnType<typeof useAppTheme>['colors'], bottomIn
       gap: Spacing.sm,
     },
     cardTitle: {
+      color: colors.textMuted,
+      fontSize: 13,
+    },
+    cardValue: {
       color: colors.textPrimary,
-      fontSize: 16,
-      fontWeight: '600',
+      fontSize: 30,
+      fontWeight: '700',
     },
     cardText: {
-      color: colors.textMuted,
+      color: colors.textSecondary,
       fontSize: 13,
       lineHeight: 19,
     },

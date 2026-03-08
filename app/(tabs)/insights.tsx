@@ -13,11 +13,11 @@ export default function InsightsScreen() {
     <SafeAreaView style={styles.screen} edges={['top']}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <Text style={styles.title}>Insights</Text>
-        <Text style={styles.subtitle}>Leitura simples para leigos, com visão mensal.</Text>
+        <Text style={styles.subtitle}>Leitura clara dos números, sem excesso de informação.</Text>
 
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Resumo visual</Text>
-          <Text style={styles.cardText}>Estrutura preparada para indicadores de receitas x gastos fixos.</Text>
+          <Text style={styles.cardTitle}>Saúde financeira</Text>
+          <Text style={styles.cardText}>Os indicadores de tendência e comparação mensal aparecerão aqui.</Text>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -38,7 +38,7 @@ function createStyles(colors: ReturnType<typeof useAppTheme>['colors'], bottomIn
     },
     title: {
       color: colors.textPrimary,
-      fontSize: 28,
+      fontSize: 30,
       fontWeight: '700',
     },
     subtitle: {
