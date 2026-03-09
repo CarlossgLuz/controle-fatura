@@ -1,56 +1,19 @@
 {
   "expo": {
     "name": "Clarium",
-    "slug": "controle-fatura",
+    "slug": "clarium",
     "version": "1.0.0",
-    "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "controlefatura",
-    "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
-    "ios": {
-      "supportsTablet": true
-    },
     "android": {
-      "softwareKeyboardLayoutMode": "resize",
+      "package": "com.carlosgabriel.clarium",
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/icon.png",
-        "backgroundImage": "./assets/images/android-icon-background.png",
-        "monochromeImage": "./assets/images/android-icon-monochrome.png"
-      },
-      "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false,
-      "package": "controle.de.gastos"
-    },
-    "web": {
-      "output": "static",
-      "favicon": "./assets/images/favicon.png"
-    },
-    "plugins": [
-      "expo-router",
-      [
-        "expo-splash-screen",
-        {
-          "image": "./assets/images/splash-icon.png",
-          "imageWidth": 200,
-          "resizeMode": "contain",
-          "backgroundColor": "#ffffff",
-          "dark": {
-            "backgroundColor": "#000000"
-          }
-        }
-      ],
-      "expo-sqlite"
-    ],
-    "experiments": {
-      "typedRoutes": true,
-      "reactCompiler": true
+        "backgroundColor": "#0B1220"
+      }
     },
     "extra": {
-      "router": {},
       "eas": {
-        "projectId": "51a1e2e0-3b5c-4e9b-92bd-1be9d8119936"
+        "projectId": "e6ef8005-e420-4ccb-af83-51a3b33942b6"
       }
     }
   }
