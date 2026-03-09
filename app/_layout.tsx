@@ -1,7 +1,7 @@
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
-import { View } from 'react-native';
+import { Text, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { isOnboardingDone } from '@/data/local/app-settings';
@@ -12,13 +12,31 @@ export default function RootLayout() {
   const { mode, colors } = useAppTheme();
   const router = useRouter();
   const segments = useSegments();
+  const [databaseReady, setDatabaseReady] = useState(false);
+  const [databaseError, setDatabaseError] = useState<string | null>(null);
   const [onboardingReady, setOnboardingReady] = useState(false);
   const [onboardingDone, setOnboardingDoneState] = useState(false);
 
   useEffect(() => {
-    initDatabase().catch((error) => {
-      console.warn('Erro ao inicializar SQLite:', error);
-    });
+    let cancelled = false;
+
+    initDatabase()
+      .then(() => {
+        if (!cancelled) {
+          setDatabaseReady(true);
+        }
+      })
+      .catch((error) => {
+        if (!cancelled) {
+          const message = error instanceof Error ? error.message : 'erro desconhecido';
+          setDatabaseError(message);
+        }
+        console.warn('Erro ao inicializar SQLite:', error);
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
@@ -57,7 +75,27 @@ export default function RootLayout() {
     }
   }, [onboardingDone, onboardingReady, router, segments]);
 
-  if (!onboardingReady) {
+  if (databaseError) {
+    return (
+      <SafeAreaProvider>
+        <StatusBar style={mode === 'dark' ? 'light' : 'dark'} />
+        <View
+          style={{
+            flex: 1,
+            backgroundColor: colors.background,
+            alignItems: 'center',
+            justifyContent: 'center',
+            paddingHorizontal: 20,
+          }}>
+          <Text style={{ color: colors.expense, fontSize: 14, textAlign: 'center' }}>
+            Não foi possível inicializar o banco local ({databaseError}).
+          </Text>
+        </View>
+      </SafeAreaProvider>
+    );
+  }
+
+  if (!onboardingReady || !databaseReady) {
     return (
       <SafeAreaProvider>
         <StatusBar style={mode === 'dark' ? 'light' : 'dark'} />

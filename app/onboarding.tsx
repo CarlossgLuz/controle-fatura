@@ -19,9 +19,9 @@ export default function OnboardingScreen() {
   return (
     <SafeAreaView style={styles.screen} edges={['top', 'bottom']}>
       <View style={styles.content}>
-        <Text style={styles.title}>Bem-vindo</Text>
+        <Text style={styles.title}>Clarium</Text>
         <Text style={styles.subtitle}>
-          App financeiro simples: 1 cartão, receitas, gastos fixos e meta mensal, tudo local.
+          Bem-vindo ao Clarium: 1 cartão, receitas, gastos fixos e meta mensal, tudo local.
         </Text>
 
         <View style={styles.listCard}>

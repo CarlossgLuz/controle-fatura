@@ -43,14 +43,20 @@ export default function InicioScreen() {
   const [error, setError] = useState<string | null>(null);
 
   const loadDashboard = useCallback(async () => {
+    console.info('[inicio] loadDashboard:start');
     setLoading(true);
     setError(null);
 
     try {
       const data = await getHomeDashboardSnapshot(new Date());
       setSnapshot(data);
+      console.info('[inicio] loadDashboard:ok', {
+        monthKey: data.monthKey,
+        movements: data.recentMovements.length,
+      });
     } catch (cause) {
       const message = cause instanceof Error ? cause.message : 'erro desconhecido';
+      console.warn('[inicio] loadDashboard:error', message);
       setError(`Não foi possível carregar os dados de início (${message}).`);
     } finally {
       setLoading(false);
@@ -94,16 +100,55 @@ export default function InicioScreen() {
             label={`Saldo de ${snapshot.monthLabel}`}
             value={formatCurrency(snapshot.monthBalance)}
             tone={monthTone}
+            iconName="dollarsign.circle.fill"
           />
 
           <View style={styles.row}>
-            <MetricCard label="Entradas" value={formatCurrency(snapshot.monthIncome)} />
-            <MetricCard label="Saídas" value={formatCurrency(snapshot.monthExpense)} />
+            <MetricCard
+              label="Entradas"
+              value={formatCurrency(snapshot.monthIncome)}
+              iconName="plus.circle.fill"
+              tone="income"
+            />
+            <MetricCard
+              label="Saídas"
+              value={formatCurrency(snapshot.monthExpense)}
+              iconName="minus.circle.fill"
+              tone="expense"
+            />
           </View>
 
           <View style={styles.row}>
-            <MetricCard label="Fixos do mês" value={formatCurrency(snapshot.monthFixedExpense)} />
-            <MetricCard label="Fatura atual" value={formatCurrency(snapshot.currentCardInvoice)} />
+            <MetricCard
+              label="Fixos do mês"
+              value={formatCurrency(snapshot.monthFixedExpense)}
+              iconName="pin.fill"
+              tone="warning"
+            />
+            <MetricCard
+              label="Fatura atual"
+              value={formatCurrency(snapshot.currentCardInvoice)}
+              iconName="creditcard.fill"
+              tone="info"
+            />
+          </View>
+
+          <View style={styles.sectionCard}>
+            <SectionHeader title="Ciclo do cartão" subtitle="Cartão principal" iconName="creditcard.fill" />
+            <View style={styles.cycleRow}>
+              <View style={styles.cycleCol}>
+                <Text style={[styles.cycleLabel, { color: colors.textMuted }]}>Fechamento</Text>
+                <Text style={[styles.cycleValue, { color: colors.textPrimary }]}>
+                  {formatDate(snapshot.cardCycleClosing)}
+                </Text>
+              </View>
+              <View style={styles.cycleCol}>
+                <Text style={[styles.cycleLabel, { color: colors.textMuted }]}>Vencimento</Text>
+                <Text style={[styles.cycleValue, { color: colors.textPrimary }]}>
+                  {formatDate(snapshot.cardCycleDue)}
+                </Text>
+              </View>
+            </View>
           </View>
 
           <ProgressCard
@@ -114,10 +159,11 @@ export default function InicioScreen() {
                 : 'Defina uma meta no Planejamento para acompanhar.'
             }
             progress={snapshot.budgetProgress}
+            iconName="target"
           />
 
           <View style={styles.sectionCard}>
-            <SectionHeader title="Últimos lançamentos" subtitle="Movimentações recentes do mês" />
+            <SectionHeader title="Últimos lançamentos" subtitle="Movimentações recentes do mês" iconName="info.circle.fill" />
 
             {snapshot.recentMovements.length === 0 ? (
               <EmptyState
@@ -163,6 +209,28 @@ function createStyles(colors: ReturnType<typeof useAppTheme>['colors']) {
       borderRadius: Radius.md,
       padding: Spacing.md,
       gap: Spacing.sm,
+    },
+    cycleRow: {
+      flexDirection: 'row',
+      gap: Spacing.sm,
+    },
+    cycleCol: {
+      flex: 1,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: Radius.sm,
+      paddingVertical: 10,
+      paddingHorizontal: Spacing.sm,
+      gap: 2,
+      backgroundColor: colors.surfaceElevated,
+    },
+    cycleLabel: {
+      fontSize: 12,
+      fontWeight: '600',
+    },
+    cycleValue: {
+      fontSize: 14,
+      fontWeight: '700',
     },
     list: {
       gap: Spacing.sm,

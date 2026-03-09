@@ -29,14 +29,20 @@ export default function InsightsScreen() {
   const [error, setError] = useState<string | null>(null);
 
   const loadInsights = useCallback(async () => {
+    console.info('[insights] loadInsights:start');
     setLoading(true);
     setError(null);
 
     try {
       const data = await getInsightsSnapshot(new Date());
       setSnapshot(data);
+      console.info('[insights] loadInsights:ok', {
+        monthKey: data.monthKey,
+        categories: data.expensesByCategory.length,
+      });
     } catch (cause) {
       const message = cause instanceof Error ? cause.message : 'erro desconhecido';
+      console.warn('[insights] loadInsights:error', message);
       setError(`Não foi possível carregar os insights (${message}).`);
     } finally {
       setLoading(false);

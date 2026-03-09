@@ -1,4 +1,4 @@
-import { listCompras, listarComprasDoCicloAtual } from '@/data/sqlite';
+import { listarCompras, listarComprasDoCicloAtual } from '@/data/sqlite';
 import {
   getBudgetConfig,
   listCategories,
@@ -19,25 +19,49 @@ function sourceError(source: string, cause: unknown): Error {
 }
 
 export async function loadMonthlyDashboardSource(referenceDate: Date): Promise<MonthlySourceData> {
+  const safeReferenceDate = Number.isFinite(referenceDate.getTime()) ? referenceDate : new Date();
+
+  console.info('[dashboard] loadMonthlyDashboardSource:start', {
+    referenceDate: safeReferenceDate.toISOString(),
+  });
+
   const [transactionsResult, recurringResult, budgetResult, categoriesResult, cyclePurchasesResult, purchasesResult] =
     await Promise.allSettled([
       listTransactions(),
       listRecurringEntries(),
       getBudgetConfig(),
-      listCategories(),
-      listarComprasDoCicloAtual(referenceDate, CARTAO_PADRAO),
-      listCompras(),
+      listCategories({ includeInactive: true }),
+      listarComprasDoCicloAtual(safeReferenceDate, CARTAO_PADRAO),
+      listarCompras(),
     ]);
 
-  if (transactionsResult.status === 'rejected') throw sourceError('transactions', transactionsResult.reason);
-  if (recurringResult.status === 'rejected') throw sourceError('recurring', recurringResult.reason);
-  if (budgetResult.status === 'rejected') throw sourceError('budget', budgetResult.reason);
-  if (categoriesResult.status === 'rejected') throw sourceError('categories', categoriesResult.reason);
-  if (cyclePurchasesResult.status === 'rejected') throw sourceError('cycle-purchases', cyclePurchasesResult.reason);
-  if (purchasesResult.status === 'rejected') throw sourceError('purchases', purchasesResult.reason);
+  if (transactionsResult.status === 'rejected') {
+    console.warn('[dashboard] source failure:transactions', transactionsResult.reason);
+    throw sourceError('transactions', transactionsResult.reason);
+  }
+  if (recurringResult.status === 'rejected') {
+    console.warn('[dashboard] source failure:recurring', recurringResult.reason);
+    throw sourceError('recurring', recurringResult.reason);
+  }
+  if (budgetResult.status === 'rejected') {
+    console.warn('[dashboard] source failure:budget', budgetResult.reason);
+    throw sourceError('budget', budgetResult.reason);
+  }
+  if (categoriesResult.status === 'rejected') {
+    console.warn('[dashboard] source failure:categories', categoriesResult.reason);
+    throw sourceError('categories', categoriesResult.reason);
+  }
+  if (cyclePurchasesResult.status === 'rejected') {
+    console.warn('[dashboard] source failure:cycle-purchases', cyclePurchasesResult.reason);
+    throw sourceError('cycle-purchases', cyclePurchasesResult.reason);
+  }
+  if (purchasesResult.status === 'rejected') {
+    console.warn('[dashboard] source failure:purchases', purchasesResult.reason);
+    throw sourceError('purchases', purchasesResult.reason);
+  }
 
   const summary = aggregateMonthFinanceData({
-    referenceDate,
+    referenceDate: safeReferenceDate,
     transactions: transactionsResult.value,
     recurringEntries: recurringResult.value,
     budget: budgetResult.value,
@@ -46,6 +70,13 @@ export async function loadMonthlyDashboardSource(referenceDate: Date): Promise<M
   });
 
   const currentCardInvoice = resumirComprasDoCiclo(cyclePurchasesResult.value).totalFaturaAtual;
+
+  console.info('[dashboard] loadMonthlyDashboardSource:ok', {
+    monthKey: summary.monthKey,
+    income: summary.incomeTotal,
+    expense: summary.expenseTotal,
+    movements: summary.recentMovements.length,
+  });
 
   return {
     summary,

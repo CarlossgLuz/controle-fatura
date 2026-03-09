@@ -1,9 +1,12 @@
 import { useFocusEffect } from '@react-navigation/native';
+import Constants from 'expo-constants';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, Linking, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { AppHeader, AppScreen, CategoryQuickAdd, EmptyState, SectionHeader } from '@/components/app';
+import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Radius, Spacing } from '@/constants/theme';
+import { getHomeDashboardSnapshot } from '@/data/local/home-dashboard';
 import {
   addRecurringEntry,
   clearBudgetConfig,
@@ -12,8 +15,10 @@ import {
   getCardConfig,
   listCategories,
   listRecurringEntries,
+  removeCustomCategory,
   removeRecurringEntryById,
   resetCardConfig,
+  setCategoryActive,
   setRecurringEntryActive,
   updateCardConfig,
   upsertBudgetTarget,
@@ -77,13 +82,35 @@ function defaultRecurringForm(type: RecurringCreateType = 'fixed'): RecurringFor
   };
 }
 
+function categoryMeta(category: Category): string {
+  const kindLabel = category.kind === 'income' ? 'Entrada' : 'Saída';
+  const usageLabel =
+    category.kind === 'income'
+      ? 'geral'
+      : category.usage === 'fixed'
+        ? 'fixo'
+        : category.usage === 'variable'
+          ? 'variável'
+          : 'geral';
+  const scopeLabel = category.system ? 'padrão' : 'custom';
+  return `${kindLabel} · ${usageLabel} · ${scopeLabel}`;
+}
+
+function clampProgress(value: number): number {
+  if (!Number.isFinite(value) || value <= 0) return 0;
+  if (value >= 1) return 1;
+  return value;
+}
+
 export default function PlanejamentoScreen() {
   const { colors, mode } = useAppTheme();
   const styles = createStyles(colors, mode === 'dark');
+  const appVersion = Constants.expoConfig?.version ?? '1.0.0';
 
   const [entries, setEntries] = useState<RecurringEntry[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
+  const [allCategories, setAllCategories] = useState<Category[]>([]);
   const [budgetTarget, setBudgetTarget] = useState<number | null>(null);
+  const [monthExpense, setMonthExpense] = useState(0);
   const [budgetInput, setBudgetInput] = useState('');
   const [cardForm, setCardForm] = useState<CardForm>({ name: '', closingDay: '5', dueDay: '8' });
   const [recurringForm, setRecurringForm] = useState<RecurringForm>(() => defaultRecurringForm());
@@ -99,16 +126,18 @@ export default function PlanejamentoScreen() {
     setError(null);
 
     try {
-      const [recurring, budget, card, allCategories] = await Promise.all([
+      const [recurring, budget, card, allCategoriesData, home] = await Promise.all([
         listRecurringEntries(),
         getBudgetConfig(),
         getCardConfig(),
-        listCategories(),
+        listCategories({ includeInactive: true }),
+        getHomeDashboardSnapshot(new Date()),
       ]);
 
       setEntries(recurring);
-      setCategories(allCategories);
+      setAllCategories(allCategoriesData);
       setBudgetTarget(budget?.targetAmount ?? null);
+      setMonthExpense(home.monthExpense);
       setBudgetInput(budget?.targetAmount ? String(budget.targetAmount).replace('.', ',') : '');
       setCardForm({
         name: card.name,
@@ -128,9 +157,39 @@ export default function PlanejamentoScreen() {
     }, [loadData])
   );
 
+  const categories = useMemo(() => allCategories.filter((entry) => entry.active), [allCategories]);
+  const categoriesForManagement = useMemo(
+    () =>
+      [...allCategories].sort((a, b) => {
+        if (a.system === b.system) return a.name.localeCompare(b.name);
+        return a.system ? -1 : 1;
+      }),
+    [allCategories]
+  );
+
+  const budgetProgressRaw = budgetTarget && budgetTarget > 0 ? monthExpense / budgetTarget : 0;
+  const budgetProgress = clampProgress(budgetProgressRaw);
+  const budgetProgressPercent = Math.round(Math.max(0, budgetProgressRaw) * 100);
+  const budgetState =
+    !budgetTarget || budgetTarget <= 0
+      ? 'Sem meta'
+      : budgetProgressRaw < 0.8
+        ? 'No limite'
+        : budgetProgressRaw <= 1
+          ? 'Atenção'
+          : 'Acima da meta';
+
   const recurringOptions = useMemo(
     () => listCategoriesByUsage(categories, usageFromRecurringType(recurringForm.type)),
     [categories, recurringForm.type]
+  );
+
+  const customRecurringOptions = useMemo(
+    () =>
+      recurringOptions
+        .filter((entry) => !entry.system)
+        .map((entry) => ({ id: entry.id, name: entry.name })),
+    [recurringOptions]
   );
 
   useEffect(() => {
@@ -146,19 +205,19 @@ export default function PlanejamentoScreen() {
     const fixed = entries.filter(
       (entry) =>
         entry.kind === 'expense' &&
-        (categories.find((category) => category.id === entry.categoryId)?.usage ?? 'all') !== 'variable'
+        (allCategories.find((category) => category.id === entry.categoryId)?.usage ?? 'all') !== 'variable'
     );
 
     const expense = entries.filter(
       (entry) =>
         entry.kind === 'expense' &&
-        (categories.find((category) => category.id === entry.categoryId)?.usage ?? 'all') === 'variable'
+        (allCategories.find((category) => category.id === entry.categoryId)?.usage ?? 'all') === 'variable'
     );
 
     const income = entries.filter((entry) => entry.kind === 'income');
 
     return { income, fixed, expense };
-  }, [categories, entries]);
+  }, [allCategories, entries]);
 
   const visibleEntries = groupedEntries[activeSegment];
 
@@ -299,6 +358,50 @@ export default function PlanejamentoScreen() {
     ]);
   };
 
+  const onToggleCategory = async (category: Category) => {
+    try {
+      await setCategoryActive(category.id, !category.active);
+      await loadData();
+      setSuccess(category.active ? 'Categoria ocultada.' : 'Categoria reativada.');
+    } catch {
+      setError('Não foi possível atualizar a categoria.');
+    }
+  };
+
+  const onDeleteCategory = (category: Category) => {
+    if (category.system) {
+      setError('Categorias padrão não podem ser excluídas. Use ocultar.');
+      return;
+    }
+
+    Alert.alert('Excluir categoria', `Deseja excluir "${category.name}"?`, [
+      { text: 'Cancelar', style: 'cancel' },
+      {
+        text: 'Excluir',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await removeCustomCategory(category.id);
+            await loadData();
+            setSuccess('Categoria removida.');
+          } catch (cause) {
+            const message = cause instanceof Error ? cause.message : 'Não foi possível excluir a categoria.';
+            setError(message);
+          }
+        },
+      },
+    ]);
+  };
+
+  const onOpenLinkedIn = async () => {
+    const url = 'https://www.linkedin.com/in/dev-carlosgabriel/';
+    try {
+      await Linking.openURL(url);
+    } catch {
+      setError('Não foi possível abrir o LinkedIn agora.');
+    }
+  };
+
   return (
     <AppScreen keyboardAware>
       <AppHeader
@@ -315,9 +418,41 @@ export default function PlanejamentoScreen() {
 
       {!loading ? (
         <>
-          <View style={styles.card}>
-            <SectionHeader title="Meta mensal" subtitle="Limite de gasto do mês" />
+          <View style={styles.goalCard}>
+            <SectionHeader title="Meta mensal" subtitle="Card principal do mês" iconName="target" />
             <Text style={styles.bigValue}>{budgetTarget ? formatCurrency(budgetTarget) : 'Sem meta mensal'}</Text>
+            <View style={styles.goalSummaryRow}>
+              <Text style={styles.goalMeta}>Gasto atual: {formatCurrency(monthExpense)}</Text>
+              <Text
+                style={[
+                  styles.goalState,
+                  budgetState === 'No limite'
+                    ? styles.goalStateGood
+                    : budgetState === 'Atenção'
+                      ? styles.goalStateWarning
+                      : budgetState === 'Acima da meta'
+                        ? styles.goalStateDanger
+                        : styles.goalStateMuted,
+                ]}>
+                {budgetState}
+              </Text>
+            </View>
+            <View style={styles.goalTrack}>
+              <View
+                style={[
+                  styles.goalFill,
+                  { width: budgetTarget ? `${Math.max(6, Math.round(budgetProgress * 100))}%` : '0%' },
+                  budgetState === 'No limite'
+                    ? styles.goalFillGood
+                    : budgetState === 'Atenção'
+                      ? styles.goalFillWarning
+                      : budgetState === 'Acima da meta'
+                        ? styles.goalFillDanger
+                        : styles.goalFillDefault,
+                ]}
+              />
+            </View>
+            {budgetTarget ? <Text style={styles.goalPercent}>{budgetProgressPercent}% da meta</Text> : null}
             <TextInput
               value={budgetInput}
               onChangeText={setBudgetInput}
@@ -337,7 +472,7 @@ export default function PlanejamentoScreen() {
           </View>
 
           <View style={styles.card}>
-            <SectionHeader title="Cartão" subtitle="Fechamento e vencimento" />
+            <SectionHeader title="Cartão" subtitle="Fechamento e vencimento" iconName="creditcard.fill" />
             <TextInput
               value={cardForm.name}
               onChangeText={(value) => setCardForm((prev) => ({ ...prev, name: value }))}
@@ -374,7 +509,7 @@ export default function PlanejamentoScreen() {
           </View>
 
           <View style={styles.card}>
-            <SectionHeader title="Recorrentes" subtitle="Criação e gestão" />
+            <SectionHeader title="Recorrentes" subtitle="Criação e gestão" iconName="arrow.clockwise.circle.fill" />
 
             <View style={styles.typeRow}>
               {(['income', 'fixed', 'expense'] as RecurringCreateType[]).map((type) => {
@@ -438,6 +573,14 @@ export default function PlanejamentoScreen() {
                     await loadData();
                     setRecurringForm((prev) => ({ ...prev, categoryId: created.id }));
                   }}
+                  customCategories={customRecurringOptions}
+                  onRemove={async (categoryId) => {
+                    await removeCustomCategory(categoryId);
+                    await loadData();
+                    if (recurringForm.categoryId === categoryId) {
+                      setRecurringForm((prev) => ({ ...prev, categoryId: '' }));
+                    }
+                  }}
                 />
                 {recurringOptions.map((category) => {
                   const active = recurringForm.categoryId === category.id;
@@ -477,18 +620,30 @@ export default function PlanejamentoScreen() {
             ) : (
               <View style={styles.list}>
                 {visibleEntries.map((entry) => (
-                  <View key={entry.id} style={styles.itemCard}>
+                  <View key={entry.id} style={[styles.itemCard, !entry.active && styles.itemCardInactive]}>
                     <View style={styles.itemHeader}>
-                      <Text style={styles.itemTitle}>{entry.description}</Text>
+                      <Text style={[styles.itemTitle, !entry.active && styles.itemTitleInactive]}>
+                        {entry.description}
+                      </Text>
                       <Text
                         style={[
                           styles.itemAmount,
                           { color: entry.kind === 'income' ? colors.income : colors.expense },
+                          !entry.active && styles.itemAmountInactive,
                         ]}>
                         {formatCurrency(entry.amount)}
                       </Text>
                     </View>
-                    <Text style={styles.itemMeta}>Mensal · Dia {entry.dayOfMonth} · {entry.active ? 'Ativo' : 'Inativo'}</Text>
+                    <View style={styles.metaRow}>
+                      <Text style={[styles.itemMeta, !entry.active && styles.itemMetaInactive]}>
+                        Mensal · Dia {entry.dayOfMonth}
+                      </Text>
+                      {!entry.active ? (
+                        <View style={styles.inactiveBadge}>
+                          <Text style={styles.inactiveBadgeText}>Desativada</Text>
+                        </View>
+                      ) : null}
+                    </View>
                     <View style={styles.row}>
                       <Pressable style={styles.secondaryButton} onPress={() => onToggleRecurring(entry)}>
                         <Text style={styles.secondaryButtonText}>{entry.active ? 'Desativar' : 'Ativar'}</Text>
@@ -502,6 +657,61 @@ export default function PlanejamentoScreen() {
               </View>
             )}
           </View>
+
+          <View style={styles.card}>
+            <SectionHeader title="Categorias" subtitle="Ocultar, reativar e excluir com segurança" iconName="pin.fill" />
+            {categoriesForManagement.length === 0 ? (
+              <EmptyState title="Sem categorias" description="Crie categorias para personalizar o fluxo." />
+            ) : (
+              <View style={styles.list}>
+                {categoriesForManagement.map((category) => (
+                  <View key={category.id} style={[styles.categoryRow, !category.active && styles.categoryRowInactive]}>
+                    <View style={styles.categoryMain}>
+                      <Text style={[styles.categoryName, !category.active && styles.categoryNameInactive]}>
+                        {category.name}
+                      </Text>
+                      <Text style={styles.categoryMeta}>{categoryMeta(category)}</Text>
+                    </View>
+
+                    <View style={styles.categoryActions}>
+                      <Pressable
+                        style={styles.categoryActionButton}
+                        onPress={() => onToggleCategory(category)}>
+                        <IconSymbol
+                          name={category.active ? 'eye.slash.fill' : 'eye.fill'}
+                          size={14}
+                          color={colors.textSecondary}
+                        />
+                        <Text style={styles.categoryActionText}>{category.active ? 'Ocultar' : 'Ativar'}</Text>
+                      </Pressable>
+
+                      {!category.system ? (
+                        <Pressable
+                          style={[styles.categoryActionButton, styles.categoryActionDanger]}
+                          onPress={() => onDeleteCategory(category)}>
+                          <IconSymbol name="trash.fill" size={14} color={colors.expense} />
+                          <Text style={styles.categoryActionDangerText}>Excluir</Text>
+                        </Pressable>
+                      ) : null}
+                    </View>
+                  </View>
+                ))}
+              </View>
+            )}
+          </View>
+
+          <View style={styles.aboutCard}>
+            <SectionHeader title="Sobre" subtitle="Autoria e licença" iconName="info.circle.fill" />
+            <Text style={styles.aboutText}>Desenvolvido por Carlos Gabriel</Text>
+
+            <Pressable style={styles.linkedinButton} onPress={onOpenLinkedIn}>
+              <IconSymbol name="link.circle.fill" size={16} color={colors.info} />
+              <Text style={styles.linkedinButtonText}>LinkedIn</Text>
+            </Pressable>
+
+            <Text style={styles.aboutMeta}>Versão {appVersion}</Text>
+            <Text style={styles.copyrightText}>© 2026 Carlos Gabriel. Todos os direitos reservados.</Text>
+          </View>
         </>
       ) : null}
 
@@ -513,6 +723,14 @@ export default function PlanejamentoScreen() {
 
 function createStyles(colors: ReturnType<typeof useAppTheme>['colors'], isDarkMode: boolean) {
   return StyleSheet.create({
+    goalCard: {
+      backgroundColor: `${colors.primary}10`,
+      borderColor: `${colors.primary}40`,
+      borderWidth: 1,
+      borderRadius: Radius.md,
+      padding: Spacing.md,
+      gap: Spacing.sm,
+    },
     card: {
       backgroundColor: colors.surface,
       borderColor: colors.border,
@@ -536,6 +754,62 @@ function createStyles(colors: ReturnType<typeof useAppTheme>['colors'], isDarkMo
       color: colors.textPrimary,
       fontSize: 26,
       fontWeight: '700',
+    },
+    goalSummaryRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: Spacing.sm,
+    },
+    goalMeta: {
+      color: colors.textSecondary,
+      fontSize: 12,
+      flex: 1,
+    },
+    goalState: {
+      fontSize: 11,
+      fontWeight: '700',
+      textTransform: 'uppercase',
+    },
+    goalStateGood: {
+      color: colors.income,
+    },
+    goalStateWarning: {
+      color: colors.warning,
+    },
+    goalStateDanger: {
+      color: colors.expense,
+    },
+    goalStateMuted: {
+      color: colors.textMuted,
+    },
+    goalTrack: {
+      height: 9,
+      borderRadius: Radius.pill,
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+      overflow: 'hidden',
+    },
+    goalFill: {
+      height: '100%',
+    },
+    goalFillGood: {
+      backgroundColor: colors.income,
+    },
+    goalFillWarning: {
+      backgroundColor: colors.warning,
+    },
+    goalFillDanger: {
+      backgroundColor: colors.expense,
+    },
+    goalFillDefault: {
+      backgroundColor: colors.primary,
+    },
+    goalPercent: {
+      color: colors.textMuted,
+      fontSize: 12,
+      fontWeight: '600',
     },
     row: {
       flexDirection: 'row',
@@ -696,6 +970,11 @@ function createStyles(colors: ReturnType<typeof useAppTheme>['colors'], isDarkMo
       padding: Spacing.sm,
       gap: Spacing.xs,
     },
+    itemCardInactive: {
+      backgroundColor: colors.background,
+      borderColor: colors.border,
+      opacity: 0.86,
+    },
     itemHeader: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -708,13 +987,138 @@ function createStyles(colors: ReturnType<typeof useAppTheme>['colors'], isDarkMo
       fontSize: 14,
       fontWeight: '600',
     },
+    itemTitleInactive: {
+      color: colors.textMuted,
+    },
     itemAmount: {
       fontSize: 14,
       fontWeight: '700',
     },
+    itemAmountInactive: {
+      color: colors.textMuted,
+    },
+    metaRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: Spacing.sm,
+    },
     itemMeta: {
       color: colors.textSecondary,
       fontSize: 12,
+      flex: 1,
+    },
+    itemMetaInactive: {
+      color: colors.textMuted,
+    },
+    inactiveBadge: {
+      borderRadius: Radius.pill,
+      borderWidth: 1,
+      borderColor: colors.border,
+      backgroundColor: colors.surface,
+      paddingHorizontal: Spacing.sm,
+      paddingVertical: 3,
+    },
+    inactiveBadgeText: {
+      color: colors.textMuted,
+      fontSize: 10,
+      fontWeight: '700',
+      textTransform: 'uppercase',
+    },
+    categoryRow: {
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: Radius.md,
+      backgroundColor: colors.surfaceElevated,
+      padding: Spacing.sm,
+      gap: Spacing.sm,
+    },
+    categoryRowInactive: {
+      backgroundColor: colors.background,
+    },
+    categoryMain: {
+      gap: 2,
+    },
+    categoryName: {
+      color: colors.textPrimary,
+      fontSize: 14,
+      fontWeight: '600',
+    },
+    categoryNameInactive: {
+      color: colors.textMuted,
+    },
+    categoryMeta: {
+      color: colors.textSecondary,
+      fontSize: 12,
+    },
+    categoryActions: {
+      flexDirection: 'row',
+      gap: Spacing.sm,
+    },
+    categoryActionButton: {
+      minHeight: 32,
+      borderRadius: Radius.sm,
+      borderWidth: 1,
+      borderColor: colors.border,
+      backgroundColor: colors.surface,
+      paddingHorizontal: Spacing.sm,
+      alignItems: 'center',
+      justifyContent: 'center',
+      flexDirection: 'row',
+      gap: 6,
+    },
+    categoryActionDanger: {
+      borderColor: `${colors.expense}66`,
+    },
+    categoryActionText: {
+      color: colors.textSecondary,
+      fontSize: 11,
+      fontWeight: '700',
+    },
+    categoryActionDangerText: {
+      color: colors.expense,
+      fontSize: 11,
+      fontWeight: '700',
+    },
+    aboutCard: {
+      backgroundColor: colors.surface,
+      borderColor: colors.border,
+      borderWidth: 1,
+      borderRadius: Radius.md,
+      padding: Spacing.md,
+      gap: Spacing.sm,
+    },
+    aboutText: {
+      color: colors.textPrimary,
+      fontSize: 13,
+      fontWeight: '600',
+    },
+    linkedinButton: {
+      minHeight: 36,
+      alignSelf: 'flex-start',
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 6,
+      borderRadius: Radius.md,
+      borderWidth: 1,
+      borderColor: colors.border,
+      backgroundColor: colors.surfaceElevated,
+      paddingHorizontal: Spacing.md,
+    },
+    linkedinButtonText: {
+      color: colors.info,
+      fontSize: 12,
+      fontWeight: '700',
+    },
+    aboutMeta: {
+      color: colors.textSecondary,
+      fontSize: 12,
+    },
+    copyrightText: {
+      color: colors.textMuted,
+      fontSize: 11,
+      lineHeight: 16,
     },
     errorText: {
       color: colors.expense,

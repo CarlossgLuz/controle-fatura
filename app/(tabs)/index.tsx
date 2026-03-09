@@ -94,7 +94,7 @@ export default function HomeScreen() {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled">
         <View style={styles.header}>
-          <Text style={styles.greeting}>Controle de fatura</Text>
+          <Text style={styles.greeting}>Clarium</Text>
           <Text style={styles.title}>Visão geral</Text>
         </View>
 

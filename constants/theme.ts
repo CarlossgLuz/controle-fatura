@@ -37,14 +37,14 @@ const darkTokens: ColorTokens = {
   textPrimary: '#EAF0FA',
   textSecondary: '#B4C0D4',
   textMuted: '#8493AB',
-  primary: '#4F8CFF',
-  income: '#2FBF8F',
-  expense: '#F06B6B',
-  warning: '#E8B14C',
-  info: '#4BA3D9',
+  primary: '#3F7BF4',
+  income: '#2FB67E',
+  expense: '#E05B61',
+  warning: '#D6A043',
+  info: '#4B9BCF',
   secondary: '#D5DFF0',
-  success: '#2FBF8F',
-  danger: '#F06B6B',
+  success: '#2FB67E',
+  danger: '#E05B61',
 };
 
 const lightTokens: ColorTokens = {
@@ -55,14 +55,14 @@ const lightTokens: ColorTokens = {
   textPrimary: '#142033',
   textSecondary: '#3A4B64',
   textMuted: '#6A7C97',
-  primary: '#1F66E5',
-  income: '#138A63',
-  expense: '#D64545',
-  warning: '#AD7A1E',
-  info: '#1E6FA0',
+  primary: '#245FD2',
+  income: '#157E5B',
+  expense: '#C94149',
+  warning: '#9E7420',
+  info: '#2A79AD',
   secondary: '#22324A',
-  success: '#138A63',
-  danger: '#D64545',
+  success: '#157E5B',
+  danger: '#C94149',
 };
 
 export const Colors: Record<ThemeMode, LegacyColorShape> = {

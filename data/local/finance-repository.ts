@@ -29,6 +29,7 @@ const RECURRING_KEY = 'finance.recurring.v1';
 const BUDGET_KEY = 'finance.budget.v1';
 const CARD_CONFIG_KEY = 'finance.card-config.v1';
 const CUSTOM_CATEGORIES_KEY = 'finance.categories.v1';
+const INACTIVE_SYSTEM_CATEGORIES_KEY = 'finance.categories.system.inactive.v1';
 
 function generateId(prefix: string): string {
   return `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
@@ -51,9 +52,130 @@ async function writeJson<T>(key: string, value: T): Promise<void> {
   await AsyncStorage.setItem(key, JSON.stringify(value));
 }
 
+function isIsoDate(value: unknown): value is `${number}-${number}-${number}` {
+  return typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value);
+}
+
+function isMonthKey(value: unknown): value is `${number}-${number}` {
+  return typeof value === 'string' && /^\d{4}-\d{2}$/.test(value);
+}
+
+function isIsoTimestamp(value: unknown): value is string {
+  return typeof value === 'string' && value.length >= 10;
+}
+
+function sanitizeStoredTransaction(
+  raw: unknown,
+  index: number
+): { value: Transaction; changed: boolean } | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const entry = raw as Partial<Transaction>;
+
+  if (entry.kind !== 'income' && entry.kind !== 'expense') return null;
+  if (typeof entry.amount !== 'number' || !Number.isFinite(entry.amount) || entry.amount <= 0) return null;
+  if (!isIsoDate(entry.date)) return null;
+  if (typeof entry.categoryId !== 'string' || !entry.categoryId) return null;
+  if (typeof entry.description !== 'string' || entry.description.trim().length === 0) return null;
+
+  const fallbackId = `txn_legacy_${entry.date}_${index}`;
+  const source = entry.source === 'recurring' ? 'recurring' : 'manual';
+  const nowIso = new Date().toISOString();
+  const cycleId = isMonthKey(entry.cycleId)
+    ? entry.cycleId
+    : (entry.date.slice(0, 7) as `${number}-${number}`);
+
+  const value: Transaction = {
+    id: typeof entry.id === 'string' && entry.id ? entry.id : fallbackId,
+    cardId: DEFAULT_CARD_CONFIG.id,
+    kind: entry.kind,
+    amount: entry.amount,
+    date: entry.date,
+    cycleId,
+    categoryId: entry.categoryId,
+    description: entry.description.trim(),
+    notes: typeof entry.notes === 'string' && entry.notes.trim() ? entry.notes.trim() : undefined,
+    source,
+    recurringEntryId: typeof entry.recurringEntryId === 'string' ? entry.recurringEntryId : undefined,
+    createdAt: isIsoTimestamp(entry.createdAt) ? entry.createdAt : nowIso,
+    updatedAt: isIsoTimestamp(entry.updatedAt) ? entry.updatedAt : nowIso,
+  };
+
+  const changed =
+    value.id !== entry.id ||
+    entry.cardId !== DEFAULT_CARD_CONFIG.id ||
+    entry.source !== source ||
+    !isMonthKey(entry.cycleId) ||
+    !isIsoTimestamp(entry.createdAt) ||
+    !isIsoTimestamp(entry.updatedAt);
+
+  return { value, changed };
+}
+
+function sanitizeStoredRecurring(
+  raw: unknown,
+  index: number
+): { value: RecurringEntry; changed: boolean } | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const entry = raw as Partial<RecurringEntry>;
+
+  if (entry.kind !== 'income' && entry.kind !== 'expense') return null;
+  if (typeof entry.amount !== 'number' || !Number.isFinite(entry.amount) || entry.amount <= 0) return null;
+  if (typeof entry.dayOfMonth !== 'number' || !Number.isInteger(entry.dayOfMonth) || entry.dayOfMonth < 1 || entry.dayOfMonth > 31) return null;
+  if (typeof entry.categoryId !== 'string' || !entry.categoryId) return null;
+  if (typeof entry.description !== 'string' || entry.description.trim().length === 0) return null;
+  if (!isMonthKey(entry.startMonth)) return null;
+  if (entry.endMonth && !isMonthKey(entry.endMonth)) return null;
+
+  const fallbackId = `rec_legacy_${entry.startMonth}_${index}`;
+  const nowIso = new Date().toISOString();
+
+  const value: RecurringEntry = {
+    id: typeof entry.id === 'string' && entry.id ? entry.id : fallbackId,
+    cardId: DEFAULT_CARD_CONFIG.id,
+    kind: entry.kind,
+    frequency: 'monthly',
+    amount: entry.amount,
+    dayOfMonth: entry.dayOfMonth,
+    categoryId: entry.categoryId,
+    description: entry.description.trim(),
+    notes: typeof entry.notes === 'string' && entry.notes.trim() ? entry.notes.trim() : undefined,
+    startMonth: entry.startMonth,
+    endMonth: entry.endMonth,
+    active: typeof entry.active === 'boolean' ? entry.active : true,
+    createdAt: isIsoTimestamp(entry.createdAt) ? entry.createdAt : nowIso,
+    updatedAt: isIsoTimestamp(entry.updatedAt) ? entry.updatedAt : nowIso,
+  };
+
+  const changed =
+    value.id !== entry.id ||
+    entry.cardId !== DEFAULT_CARD_CONFIG.id ||
+    entry.frequency !== 'monthly' ||
+    typeof entry.active !== 'boolean' ||
+    !isIsoTimestamp(entry.createdAt) ||
+    !isIsoTimestamp(entry.updatedAt);
+
+  return { value, changed };
+}
+
 export async function listTransactions(): Promise<Transaction[]> {
-  const data = await readJson<Transaction[]>(TRANSACTIONS_KEY, []);
-  return [...data].sort((a, b) => b.date.localeCompare(a.date));
+  const rawData = await readJson<unknown>(TRANSACTIONS_KEY, []);
+  const data = Array.isArray(rawData) ? rawData : [];
+  const sanitized = data
+    .map((entry, index) => sanitizeStoredTransaction(entry, index))
+    .filter((entry): entry is { value: Transaction; changed: boolean } => Boolean(entry));
+
+  if (sanitized.length !== data.length || sanitized.some((entry) => entry.changed)) {
+    console.warn('[transactions] invalid payload detected and sanitized', {
+      total: data.length,
+      valid: sanitized.length,
+    });
+    await writeJson(
+      TRANSACTIONS_KEY,
+      sanitized.map((entry) => entry.value)
+    );
+  }
+
+  return sanitized.map((entry) => entry.value).sort((a, b) => b.date.localeCompare(a.date));
 }
 
 export async function addTransaction(input: NewTransactionInput): Promise<Transaction> {
@@ -90,8 +212,26 @@ export async function removeTransactionById(transactionId: string): Promise<void
 }
 
 export async function listRecurringEntries(): Promise<RecurringEntry[]> {
-  const data = await readJson<RecurringEntry[]>(RECURRING_KEY, []);
-  return [...data].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+  const rawData = await readJson<unknown>(RECURRING_KEY, []);
+  const data = Array.isArray(rawData) ? rawData : [];
+  const sanitized = data
+    .map((entry, index) => sanitizeStoredRecurring(entry, index))
+    .filter((entry): entry is { value: RecurringEntry; changed: boolean } => Boolean(entry));
+
+  if (sanitized.length !== data.length || sanitized.some((entry) => entry.changed)) {
+    console.warn('[recurring] invalid payload detected and sanitized', {
+      total: data.length,
+      valid: sanitized.length,
+    });
+    await writeJson(
+      RECURRING_KEY,
+      sanitized.map((entry) => entry.value)
+    );
+  }
+
+  return sanitized
+    .map((entry) => entry.value)
+    .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
 }
 
 export async function addRecurringEntry(input: NewRecurringEntryInput): Promise<RecurringEntry> {
@@ -193,16 +333,66 @@ function categoryIdFromName(kind: Category['kind'], name: string, usage: NonNull
   return `custom-${kind}-${usage}-${slug || Date.now().toString(36)}`;
 }
 
-async function listStoredCategories(): Promise<Category[]> {
-  return readJson<Category[]>(CUSTOM_CATEGORIES_KEY, []);
+function sanitizeStoredCategory(raw: unknown): Category | null {
+  if (!raw || typeof raw !== 'object') return null;
+
+  const candidate = raw as Partial<Category>;
+  if (typeof candidate.id !== 'string' || !candidate.id) return null;
+  if (typeof candidate.name !== 'string' || !candidate.name.trim()) return null;
+  if (candidate.kind !== 'income' && candidate.kind !== 'expense') return null;
+  if (typeof candidate.active !== 'boolean') return null;
+
+  const usage =
+    candidate.kind === 'income'
+      ? 'all'
+      : candidate.usage === 'fixed' || candidate.usage === 'variable' || candidate.usage === 'all'
+        ? candidate.usage
+        : 'all';
+
+  return {
+    id: candidate.id,
+    name: normalizeCategoryName(candidate.name),
+    kind: candidate.kind,
+    usage,
+    system: false,
+    active: candidate.active,
+  };
 }
 
-export async function listCategories(): Promise<Category[]> {
+async function listStoredCategories(): Promise<Category[]> {
+  const rawStored = await readJson<unknown>(CUSTOM_CATEGORIES_KEY, []);
+  const stored = Array.isArray(rawStored) ? rawStored : [];
+  const sanitized = stored.map(sanitizeStoredCategory).filter((entry): entry is Category => Boolean(entry));
+
+  // Keep storage healthy if we had invalid historical payloads.
+  if (sanitized.length !== stored.length) {
+    console.warn('[categories] invalid custom categories detected and sanitized', {
+      total: stored.length,
+      valid: sanitized.length,
+    });
+    await writeJson(CUSTOM_CATEGORIES_KEY, sanitized);
+  }
+
+  return sanitized;
+}
+
+async function listInactiveSystemCategoryIds(): Promise<string[]> {
+  const raw = await readJson<unknown>(INACTIVE_SYSTEM_CATEGORIES_KEY, []);
+  if (!Array.isArray(raw)) return [];
+  return raw.filter((entry): entry is string => typeof entry === 'string' && entry.length > 0);
+}
+
+type ListCategoriesOptions = {
+  includeInactive?: boolean;
+};
+
+export async function listCategories(options?: ListCategoriesOptions): Promise<Category[]> {
   const custom = await listStoredCategories();
+  const inactiveSystemIds = new Set(await listInactiveSystemCategoryIds());
   const map = new Map<string, Category>();
 
   for (const entry of DEFAULT_CATEGORIES) {
-    map.set(entry.id, entry);
+    map.set(entry.id, { ...entry, active: !inactiveSystemIds.has(entry.id) });
   }
 
   for (const entry of custom) {
@@ -210,7 +400,7 @@ export async function listCategories(): Promise<Category[]> {
   }
 
   return [...map.values()]
-    .filter((entry) => entry.active)
+    .filter((entry) => (options?.includeInactive ? true : entry.active))
     .sort((a, b) => {
       if (a.system === b.system) {
         return a.name.localeCompare(b.name);
@@ -230,7 +420,7 @@ export async function createCustomCategory(input: {
   }
 
   const usage: NonNullable<Category['usage']> = input.kind === 'income' ? 'all' : input.usage ?? 'all';
-  const allCategories = await listCategories();
+  const allCategories = await listCategories({ includeInactive: true });
   const existing = allCategories.find(
     (entry) =>
       entry.kind === input.kind &&
@@ -239,6 +429,12 @@ export async function createCustomCategory(input: {
   );
 
   if (existing) {
+    if (!existing.active) {
+      const reactivated = await setCategoryActive(existing.id, true);
+      if (reactivated) {
+        return reactivated;
+      }
+    }
     return existing;
   }
 
@@ -254,4 +450,76 @@ export async function createCustomCategory(input: {
 
   await writeJson(CUSTOM_CATEGORIES_KEY, [next, ...custom]);
   return next;
+}
+
+export async function listCustomCategories(filters?: {
+  kind?: Category['kind'];
+  usage?: Category['usage'];
+}): Promise<Category[]> {
+  const custom = await listStoredCategories();
+
+  return custom.filter((entry) => {
+    if (!entry.active) return false;
+    if (filters?.kind && entry.kind !== filters.kind) return false;
+    if (filters?.usage && (entry.usage ?? 'all') !== filters.usage) return false;
+    return true;
+  });
+}
+
+export async function removeCustomCategory(categoryId: string): Promise<void> {
+  const defaultCategory = DEFAULT_CATEGORIES.find((entry) => entry.id === categoryId);
+  if (defaultCategory) {
+    throw new Error('Categorias padrão não podem ser removidas.');
+  }
+
+  const custom = await listStoredCategories();
+  const target = custom.find((entry) => entry.id === categoryId);
+  if (!target) {
+    throw new Error('Categoria customizada não encontrada.');
+  }
+
+  const [transactions, recurringEntries] = await Promise.all([
+    listTransactions(),
+    listRecurringEntries(),
+  ]);
+
+  const inTransactions = transactions.some((entry) => entry.categoryId === categoryId);
+  if (inTransactions) {
+    throw new Error('Categoria em uso por lançamentos. Remova os vínculos antes de excluir.');
+  }
+
+  const inRecurring = recurringEntries.some((entry) => entry.categoryId === categoryId);
+  if (inRecurring) {
+    throw new Error('Categoria em uso por recorrências. Remova os vínculos antes de excluir.');
+  }
+
+  await writeJson(
+    CUSTOM_CATEGORIES_KEY,
+    custom.filter((entry) => entry.id !== categoryId)
+  );
+}
+
+export async function setCategoryActive(categoryId: string, active: boolean): Promise<Category | null> {
+  const defaultCategory = DEFAULT_CATEGORIES.find((entry) => entry.id === categoryId);
+  if (defaultCategory) {
+    const inactiveSystemIds = new Set(await listInactiveSystemCategoryIds());
+    if (active) {
+      inactiveSystemIds.delete(categoryId);
+    } else {
+      inactiveSystemIds.add(categoryId);
+    }
+
+    await writeJson(INACTIVE_SYSTEM_CATEGORIES_KEY, [...inactiveSystemIds]);
+    return { ...defaultCategory, active };
+  }
+
+  const custom = await listStoredCategories();
+  const target = custom.find((entry) => entry.id === categoryId);
+  if (!target) {
+    return null;
+  }
+
+  const next = custom.map((entry) => (entry.id === categoryId ? { ...entry, active } : entry));
+  await writeJson(CUSTOM_CATEGORIES_KEY, next);
+  return { ...target, active };
 }

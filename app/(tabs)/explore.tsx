@@ -20,7 +20,7 @@ export default function ExploreScreen() {
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Status atual</Text>
           <Text style={styles.cardText}>
-            O app está configurado para controle local de compras com ciclo de fatura e SQLite.
+            O Clarium está configurado para controle local de compras com ciclo de fatura e SQLite.
           </Text>
         </View>
       </ScrollView>

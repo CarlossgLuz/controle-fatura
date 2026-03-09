@@ -34,7 +34,30 @@ export interface MonthlyAggregation {
   };
 }
 
+function uniqueMovementIds(movements: MonthlyMovement[]): MonthlyMovement[] {
+  const seen = new Map<string, number>();
+
+  return movements.map((movement, index) => {
+    const base = movement.id && movement.id.trim() ? movement.id : `movement:${movement.date}:${index}`;
+    const count = seen.get(base) ?? 0;
+    seen.set(base, count + 1);
+
+    if (count === 0) {
+      return { ...movement, id: base };
+    }
+
+    return { ...movement, id: `${base}:${count}` };
+  });
+}
+
 function toMonthKey(date: Date): string {
+  if (!Number.isFinite(date.getTime())) {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, '0');
+    return `${y}-${m}`;
+  }
+
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
   return `${year}-${month}`;
@@ -50,6 +73,10 @@ function clampProgress(value: number): number {
   if (!Number.isFinite(value) || value < 0) return 0;
   if (value > 1) return 1;
   return value;
+}
+
+function safeNumber(value: number): number {
+  return Number.isFinite(value) ? value : 0;
 }
 
 function mapPurchaseCategory(compra: Compra): string {
@@ -134,16 +161,17 @@ export function aggregateMonthFinanceData(input: {
 
   const cardExpenseTotal = monthPurchases.reduce((sum, entry) => sum + entry.valor, 0);
 
-  const incomeTotal = transactionIncome + activeRecurringIncome;
-  const expenseTotal =
-    transactionExpense + recurringFixedExpense + recurringVariableExpense + cardExpenseTotal;
+  const incomeTotal = safeNumber(transactionIncome + activeRecurringIncome);
+  const expenseTotal = safeNumber(
+    transactionExpense + recurringFixedExpense + recurringVariableExpense + cardExpenseTotal
+  );
   const balance = incomeTotal - expenseTotal;
 
   const budgetTarget = input.budget?.month === monthKey ? input.budget.targetAmount : 0;
   const budgetProgress = budgetTarget > 0 ? clampProgress(expenseTotal / budgetTarget) : 0;
 
-  const movementTransactions: MonthlyMovement[] = monthTransactions.map((entry) => ({
-    id: `txn:${entry.id}`,
+  const movementTransactions: MonthlyMovement[] = monthTransactions.map((entry, index) => ({
+    id: entry.id ? `txn:${entry.id}` : `txn:legacy:${entry.date}:${index}`,
     title: entry.description,
     amount: entry.amount,
     date: entry.date,
@@ -151,8 +179,8 @@ export function aggregateMonthFinanceData(input: {
     source: entry.source,
   }));
 
-  const movementPurchases: MonthlyMovement[] = monthPurchases.map((entry) => ({
-    id: `buy:${entry.id}`,
+  const movementPurchases: MonthlyMovement[] = monthPurchases.map((entry, index) => ({
+    id: entry.id ? `buy:${entry.id}` : `buy:legacy:${entry.dataCompra}:${index}`,
     title: entry.titulo,
     amount: entry.valor,
     date: entry.dataCompra,
@@ -160,7 +188,7 @@ export function aggregateMonthFinanceData(input: {
     source: 'card',
   }));
 
-  const recentMovements = [...movementTransactions, ...movementPurchases]
+  const recentMovements = uniqueMovementIds([...movementTransactions, ...movementPurchases])
     .sort((a, b) => b.date.localeCompare(a.date))
     .slice(0, 8);
 
@@ -234,8 +262,8 @@ export function aggregateMonthFinanceData(input: {
     expensesByCategory,
     paymentUsage,
     fixedVsVariable: {
-      fixed: recurringFixedExpense,
-      variable: Math.max(expenseTotal - recurringFixedExpense, 0),
+      fixed: safeNumber(recurringFixedExpense),
+      variable: safeNumber(Math.max(expenseTotal - recurringFixedExpense, 0)),
     },
   };
 }

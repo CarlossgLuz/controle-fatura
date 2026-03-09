@@ -6,11 +6,14 @@ import { useAppTheme } from '@/hooks/use-app-theme';
 
 type CategoryKind = 'income' | 'expense';
 type CategoryUsage = 'all' | 'fixed' | 'variable';
+type CategoryOption = { id: string; name: string };
 
 interface CategoryQuickAddProps {
   kind: CategoryKind;
   usage: CategoryUsage;
   onSave: (name: string, kind: CategoryKind, usage: CategoryUsage) => Promise<void>;
+  customCategories?: CategoryOption[];
+  onRemove?: (categoryId: string) => Promise<void>;
   triggerMode?: 'button' | 'chip';
 }
 
@@ -18,6 +21,8 @@ export function CategoryQuickAdd({
   kind,
   usage,
   onSave,
+  customCategories = [],
+  onRemove,
   triggerMode = 'button',
 }: CategoryQuickAddProps) {
   const { colors } = useAppTheme();
@@ -26,6 +31,7 @@ export function CategoryQuickAdd({
   const [open, setOpen] = useState(false);
   const [name, setName] = useState('');
   const [saving, setSaving] = useState(false);
+  const [removingId, setRemovingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   return (
@@ -58,6 +64,38 @@ export function CategoryQuickAdd({
             />
 
             {error ? <Text style={styles.error}>{error}</Text> : null}
+
+            {customCategories.length > 0 ? (
+              <View style={styles.customList}>
+                <Text style={styles.customTitle}>Categorias customizadas</Text>
+                {customCategories.map((category) => (
+                  <View key={category.id} style={styles.customItem}>
+                    <Text style={styles.customItemText}>{category.name}</Text>
+                    {onRemove ? (
+                      <Pressable
+                        onPress={async () => {
+                          setError(null);
+                          setRemovingId(category.id);
+                          try {
+                            await onRemove(category.id);
+                          } catch (cause) {
+                            const message = cause instanceof Error ? cause.message : 'Não foi possível remover.';
+                            setError(message);
+                          } finally {
+                            setRemovingId(null);
+                          }
+                        }}
+                        style={styles.removeButton}
+                        disabled={removingId === category.id}>
+                        <Text style={styles.removeText}>
+                          {removingId === category.id ? '...' : 'Remover'}
+                        </Text>
+                      </Pressable>
+                    ) : null}
+                  </View>
+                ))}
+              </View>
+            ) : null}
 
             <View style={styles.row}>
               <Pressable style={styles.secondary} onPress={() => setOpen(false)}>
@@ -166,6 +204,44 @@ function createStyles(colors: ReturnType<typeof useAppTheme>['colors']) {
       flexDirection: 'row',
       justifyContent: 'flex-end',
       gap: Spacing.sm,
+    },
+    customList: {
+      gap: Spacing.xs,
+    },
+    customTitle: {
+      color: colors.textSecondary,
+      fontSize: 12,
+      fontWeight: '600',
+    },
+    customItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: Spacing.sm,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: Radius.sm,
+      paddingHorizontal: Spacing.sm,
+      paddingVertical: 6,
+      backgroundColor: colors.surfaceElevated,
+    },
+    customItemText: {
+      color: colors.textPrimary,
+      fontSize: 13,
+      flex: 1,
+    },
+    removeButton: {
+      minHeight: 26,
+      borderRadius: Radius.sm,
+      borderWidth: 1,
+      borderColor: colors.expense,
+      justifyContent: 'center',
+      paddingHorizontal: Spacing.sm,
+    },
+    removeText: {
+      color: colors.expense,
+      fontSize: 11,
+      fontWeight: '700',
     },
     secondary: {
       minHeight: 38,

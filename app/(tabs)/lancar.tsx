@@ -15,6 +15,7 @@ import {
   addTransaction,
   createCustomCategory,
   listCategories,
+  removeCustomCategory,
 } from '@/data/local/finance-repository';
 import { listCategoriesByUsage, type Category } from '@/domain/finance';
 import { DEFAULT_CARD_CONFIG } from '@/domain/finance/types';
@@ -93,6 +94,11 @@ export default function LancarScreen() {
   const categoryOptions = useMemo(() => {
     return listCategoriesByUsage(categories, usageFromType(form.type));
   }, [categories, form.type]);
+
+  const customCategoryOptions = useMemo(
+    () => categoryOptions.filter((entry) => !entry.system).map((entry) => ({ id: entry.id, name: entry.name })),
+    [categoryOptions]
+  );
 
   useEffect(() => {
     if (!categoryOptions.find((entry) => entry.id === form.categoryId)) {
@@ -273,6 +279,14 @@ export default function LancarScreen() {
                 const created = await createCustomCategory({ name, kind, usage });
                 await loadCategories();
                 onField('categoryId', created.id);
+              }}
+              customCategories={customCategoryOptions}
+              onRemove={async (categoryId) => {
+                await removeCustomCategory(categoryId);
+                await loadCategories();
+                if (form.categoryId === categoryId) {
+                  onField('categoryId', '');
+                }
               }}
             />
             {categoryOptions.map((category) => {
