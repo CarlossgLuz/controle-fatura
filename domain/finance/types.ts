@@ -12,6 +12,7 @@ export interface Category {
   id: string;
   name: string;
   kind: TransactionKind;
+  usage?: 'all' | 'fixed' | 'variable';
   system: boolean;
   active: boolean;
 }

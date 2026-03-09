@@ -1,9 +1,18 @@
 import { useFocusEffect } from '@react-navigation/native';
-import { useCallback, useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useCallback, useState } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { getHomeDashboardSnapshot } from '@/data/local/home-dashboard';
+import {
+  AppHeader,
+  AppScreen,
+  EmptyState,
+  MetricCard,
+  ProgressCard,
+  SectionHeader,
+  SummaryCard,
+  TransactionListItem,
+} from '@/components/app';
 import { Radius, Spacing } from '@/constants/theme';
 import { useAppTheme } from '@/hooks/use-app-theme';
 
@@ -21,14 +30,13 @@ function formatDate(isoDate: string): string {
   return `${day}/${month}/${year}`;
 }
 
-function progressPercent(value: number): string {
-  return `${Math.round(value * 100)}%`;
+function signedAmount(kind: 'income' | 'expense', amount: number): string {
+  return `${kind === 'income' ? '+' : '-'} ${formatCurrency(amount)}`;
 }
 
 export default function InicioScreen() {
-  const insets = useSafeAreaInsets();
   const { colors } = useAppTheme();
-  const styles = createStyles(colors, insets.bottom);
+  const styles = createStyles(colors);
 
   const [snapshot, setSnapshot] = useState<HomeSnapshot | null>(null);
   const [loading, setLoading] = useState(true);
@@ -41,8 +49,9 @@ export default function InicioScreen() {
     try {
       const data = await getHomeDashboardSnapshot(new Date());
       setSnapshot(data);
-    } catch {
-      setError('Não foi possível carregar os dados da home.');
+    } catch (cause) {
+      const message = cause instanceof Error ? cause.message : 'erro desconhecido';
+      setError(`Não foi possível carregar os dados de início (${message}).`);
     } finally {
       setLoading(false);
     }
@@ -54,249 +63,127 @@ export default function InicioScreen() {
     }, [loadDashboard])
   );
 
-  const saldoColor = useMemo(() => {
-    if (!snapshot) {
-      return colors.textPrimary;
-    }
-
-    return snapshot.monthBalance >= 0 ? colors.success : colors.danger;
-  }, [colors.danger, colors.success, colors.textPrimary, snapshot]);
-
-  const progressWidth = useMemo(() => {
-    if (!snapshot) {
-      return '0%';
-    }
-
-    return `${Math.round(snapshot.budgetProgress * 100)}%`;
-  }, [snapshot]);
+  const monthTone = !snapshot ? 'default' : snapshot.monthBalance >= 0 ? 'income' : 'expense';
 
   return (
-    <SafeAreaView style={styles.screen} edges={['top']}>
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <Text style={styles.eyebrow}>Visão geral</Text>
-        <Text style={styles.title}>Início</Text>
-        <Text style={styles.subtitle}>Leitura rápida do mês atual.</Text>
+    <AppScreen>
+      <AppHeader
+        eyebrow="Visão mensal"
+        title="Início"
+        subtitle="Resumo direto do mês, sem ruído visual."
+      />
 
-        {loading || !snapshot ? (
-          <View style={styles.heroCard}>
-            <Text style={styles.heroLabel}>Carregando...</Text>
+      {loading && !snapshot ? (
+        <View style={styles.cardLoading}>
+          <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Carregando dados...</Text>
+        </View>
+      ) : null}
+
+      {!loading && error && !snapshot ? (
+        <EmptyState
+          title="Falha ao carregar"
+          description="Não conseguimos buscar os dados do mês agora."
+          actionLabel="Tentar novamente"
+          onActionPress={loadDashboard}
+        />
+      ) : null}
+
+      {snapshot ? (
+        <>
+          <SummaryCard
+            label={`Saldo de ${snapshot.monthLabel}`}
+            value={formatCurrency(snapshot.monthBalance)}
+            tone={monthTone}
+          />
+
+          <View style={styles.row}>
+            <MetricCard label="Entradas" value={formatCurrency(snapshot.monthIncome)} />
+            <MetricCard label="Saídas" value={formatCurrency(snapshot.monthExpense)} />
           </View>
-        ) : (
-          <>
-            <View style={styles.heroCard}>
-              <Text style={styles.heroLabel}>Saldo do mês</Text>
-              <Text style={[styles.heroValue, { color: saldoColor }]}>
-                {formatCurrency(snapshot.monthBalance)}
-              </Text>
-            </View>
 
-            <View style={styles.grid}>
-              <View style={styles.card}>
-                <Text style={styles.cardLabel}>Receitas do mês</Text>
-                <Text style={styles.cardValue}>{formatCurrency(snapshot.monthIncome)}</Text>
-              </View>
-              <View style={styles.card}>
-                <Text style={styles.cardLabel}>Gastos do mês</Text>
-                <Text style={styles.cardValue}>{formatCurrency(snapshot.monthExpense)}</Text>
-              </View>
-            </View>
+          <View style={styles.row}>
+            <MetricCard label="Fixos do mês" value={formatCurrency(snapshot.monthFixedExpense)} />
+            <MetricCard label="Fatura atual" value={formatCurrency(snapshot.currentCardInvoice)} />
+          </View>
 
-            <View style={styles.grid}>
-              <View style={styles.card}>
-                <Text style={styles.cardLabel}>Fixos do mês</Text>
-                <Text style={styles.cardValue}>{formatCurrency(snapshot.monthFixedExpense)}</Text>
-              </View>
-              <View style={styles.card}>
-                <Text style={styles.cardLabel}>Fatura atual</Text>
-                <Text style={styles.cardValue}>{formatCurrency(snapshot.currentCardInvoice)}</Text>
-              </View>
-            </View>
+          <ProgressCard
+            title="Meta mensal"
+            subtitle={
+              snapshot.budgetTarget > 0
+                ? `${formatCurrency(snapshot.monthExpense)} de ${formatCurrency(snapshot.budgetTarget)}`
+                : 'Defina uma meta no Planejamento para acompanhar.'
+            }
+            progress={snapshot.budgetProgress}
+          />
 
-            <View style={styles.cardFull}>
-              <View style={styles.progressHeader}>
-                <Text style={styles.cardLabel}>Meta mensal</Text>
-                <Text style={styles.progressText}>
-                  {snapshot.budgetTarget > 0
-                    ? `${progressPercent(snapshot.budgetProgress)} de ${formatCurrency(snapshot.budgetTarget)}`
-                    : 'Meta não definida'}
-                </Text>
-              </View>
-              <View style={styles.progressTrack}>
-                <View style={[styles.progressFill, { width: progressWidth }]} />
-              </View>
-            </View>
+          <View style={styles.sectionCard}>
+            <SectionHeader title="Últimos lançamentos" subtitle="Movimentações recentes do mês" />
 
-            <View style={styles.cardFull}>
-              <Text style={styles.sectionTitle}>Últimas movimentações</Text>
-              {snapshot.recentMovements.length === 0 ? (
-                <Text style={styles.emptyText}>Sem movimentações recentes.</Text>
-              ) : (
-                <View style={styles.list}>
-                  {snapshot.recentMovements.map((item) => (
-                    <View key={item.id} style={styles.listItem}>
-                      <View style={styles.listItemLeft}>
-                        <Text style={styles.listTitle}>{item.title}</Text>
-                        <Text style={styles.listMeta}>{formatDate(item.date)}</Text>
-                      </View>
-                      <Text
-                        style={[
-                          styles.listAmount,
-                          { color: item.kind === 'income' ? colors.success : colors.textPrimary },
-                        ]}>
-                        {item.kind === 'income' ? '+' : '-'} {formatCurrency(item.amount)}
-                      </Text>
-                    </View>
-                  ))}
-                </View>
-              )}
-            </View>
-          </>
-        )}
+            {snapshot.recentMovements.length === 0 ? (
+              <EmptyState
+                title="Sem movimentações"
+                description="Use a aba Lançar para registrar a primeira receita ou gasto."
+              />
+            ) : (
+              <View style={styles.list}>
+                {snapshot.recentMovements.map((item) => (
+                  <TransactionListItem
+                    key={item.id}
+                    title={item.title}
+                    meta={formatDate(item.date)}
+                    amount={signedAmount(item.kind, item.amount)}
+                    kind={item.kind}
+                  />
+                ))}
+              </View>
+            )}
+          </View>
+        </>
+      ) : null}
 
-        {error ? <Text style={styles.errorText}>{error}</Text> : null}
-      </ScrollView>
-    </SafeAreaView>
+      {error && snapshot ? (
+        <Pressable onPress={loadDashboard} style={styles.retryInline}>
+          <Text style={[styles.retryText, { color: colors.info }]}>Atualizar dados</Text>
+        </Pressable>
+      ) : null}
+    </AppScreen>
   );
 }
 
-function createStyles(colors: ReturnType<typeof useAppTheme>['colors'], bottomInset: number) {
+function createStyles(colors: ReturnType<typeof useAppTheme>['colors']) {
   return StyleSheet.create({
-    screen: {
-      flex: 1,
-      backgroundColor: colors.background,
-    },
-    content: {
-      paddingHorizontal: Spacing.xl,
-      paddingTop: Spacing.md,
-      paddingBottom: bottomInset + Spacing.xxl,
-      gap: Spacing.md,
-    },
-    eyebrow: {
-      color: colors.textMuted,
-      fontSize: 12,
-      fontWeight: '600',
-      letterSpacing: 0.4,
-      textTransform: 'uppercase',
-    },
-    title: {
-      color: colors.textPrimary,
-      fontSize: 30,
-      fontWeight: '700',
-      marginTop: -2,
-    },
-    subtitle: {
-      color: colors.textSecondary,
-      fontSize: 14,
-      lineHeight: 20,
-    },
-    heroCard: {
-      backgroundColor: colors.surface,
-      borderColor: colors.border,
-      borderWidth: 1,
-      borderRadius: Radius.lg,
-      padding: Spacing.lg,
-      gap: Spacing.xs,
-    },
-    heroLabel: {
-      color: colors.textMuted,
-      fontSize: 13,
-    },
-    heroValue: {
-      fontSize: 34,
-      fontWeight: '700',
-      color: colors.textPrimary,
-    },
-    grid: {
+    row: {
       flexDirection: 'row',
       gap: Spacing.sm,
     },
-    card: {
-      flex: 1,
+    sectionCard: {
       backgroundColor: colors.surface,
-      borderColor: colors.border,
       borderWidth: 1,
-      borderRadius: Radius.md,
-      padding: Spacing.md,
-      gap: Spacing.xs,
-    },
-    cardFull: {
-      backgroundColor: colors.surface,
       borderColor: colors.border,
-      borderWidth: 1,
       borderRadius: Radius.md,
       padding: Spacing.md,
       gap: Spacing.sm,
-    },
-    cardLabel: {
-      color: colors.textMuted,
-      fontSize: 12,
-    },
-    cardValue: {
-      color: colors.textPrimary,
-      fontSize: 20,
-      fontWeight: '700',
-    },
-    progressHeader: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      gap: Spacing.md,
-    },
-    progressText: {
-      color: colors.textSecondary,
-      fontSize: 12,
-      fontWeight: '600',
-    },
-    progressTrack: {
-      height: 10,
-      borderRadius: Radius.pill,
-      overflow: 'hidden',
-      backgroundColor: colors.surfaceElevated,
-      borderWidth: 1,
-      borderColor: colors.border,
-    },
-    progressFill: {
-      height: '100%',
-      backgroundColor: colors.primary,
-    },
-    sectionTitle: {
-      color: colors.textPrimary,
-      fontSize: 15,
-      fontWeight: '600',
-    },
-    emptyText: {
-      color: colors.textMuted,
-      fontSize: 13,
     },
     list: {
       gap: Spacing.sm,
     },
-    listItem: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      gap: Spacing.sm,
+    cardLoading: {
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: Radius.md,
+      backgroundColor: colors.surface,
+      padding: Spacing.lg,
     },
-    listItemLeft: {
-      flex: 1,
-      gap: 2,
-    },
-    listTitle: {
-      color: colors.textPrimary,
+    loadingText: {
       fontSize: 14,
-      fontWeight: '600',
     },
-    listMeta: {
-      color: colors.textMuted,
-      fontSize: 12,
+    retryInline: {
+      alignSelf: 'center',
+      paddingVertical: Spacing.xs,
     },
-    listAmount: {
-      fontSize: 14,
-      fontWeight: '700',
-    },
-    errorText: {
-      color: colors.danger,
+    retryText: {
       fontSize: 13,
+      fontWeight: '600',
     },
   });
 }

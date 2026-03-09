@@ -6,15 +6,18 @@ export type ColorTokens = {
   background: string;
   surface: string;
   surfaceElevated: string;
-  primary: string;
-  secondary: string;
-  success: string;
-  warning: string;
-  danger: string;
+  border: string;
   textPrimary: string;
   textSecondary: string;
   textMuted: string;
-  border: string;
+  primary: string;
+  income: string;
+  expense: string;
+  warning: string;
+  info: string;
+  secondary: string;
+  success: string;
+  danger: string;
 };
 
 type LegacyColorShape = {
@@ -27,33 +30,39 @@ type LegacyColorShape = {
 } & ColorTokens;
 
 const darkTokens: ColorTokens = {
-  background: '#070A13',
-  surface: '#0F172A',
-  surfaceElevated: '#111C33',
-  primary: '#7DD3FC',
-  secondary: '#F8FAFC',
-  success: '#34D399',
-  warning: '#FBBF24',
-  danger: '#F87171',
-  textPrimary: '#F8FAFC',
-  textSecondary: '#CBD5E1',
-  textMuted: '#94A3B8',
-  border: '#1E293B',
+  background: '#0B1220',
+  surface: '#121A2A',
+  surfaceElevated: '#1A2539',
+  border: '#23324A',
+  textPrimary: '#EAF0FA',
+  textSecondary: '#B4C0D4',
+  textMuted: '#8493AB',
+  primary: '#4F8CFF',
+  income: '#2FBF8F',
+  expense: '#F06B6B',
+  warning: '#E8B14C',
+  info: '#4BA3D9',
+  secondary: '#D5DFF0',
+  success: '#2FBF8F',
+  danger: '#F06B6B',
 };
 
 const lightTokens: ColorTokens = {
-  background: '#F2F4F8',
+  background: '#F3F6FB',
   surface: '#FFFFFF',
-  surfaceElevated: '#F8FAFC',
-  primary: '#0369A1',
-  secondary: '#0F172A',
-  success: '#059669',
-  warning: '#D97706',
-  danger: '#DC2626',
-  textPrimary: '#0F172A',
-  textSecondary: '#334155',
-  textMuted: '#64748B',
-  border: '#CBD5E1',
+  surfaceElevated: '#EEF3FA',
+  border: '#D9E2EF',
+  textPrimary: '#142033',
+  textSecondary: '#3A4B64',
+  textMuted: '#6A7C97',
+  primary: '#1F66E5',
+  income: '#138A63',
+  expense: '#D64545',
+  warning: '#AD7A1E',
+  info: '#1E6FA0',
+  secondary: '#22324A',
+  success: '#138A63',
+  danger: '#D64545',
 };
 
 export const Colors: Record<ThemeMode, LegacyColorShape> = {
@@ -95,10 +104,10 @@ export const Radius = {
 export const Shadows = {
   card: {
     shadowColor: '#000000',
-    shadowOpacity: 0.24,
+    shadowOpacity: 0.16,
     shadowRadius: 14,
-    shadowOffset: { width: 0, height: 7 },
-    elevation: 4,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 3,
   },
 };
 
@@ -108,13 +117,9 @@ export function getColorTokens(mode: ThemeMode): ColorTokens {
 
 export const Fonts = Platform.select({
   ios: {
-    /** iOS `UIFontDescriptorSystemDesignDefault` */
     sans: 'system-ui',
-    /** iOS `UIFontDescriptorSystemDesignSerif` */
     serif: 'ui-serif',
-    /** iOS `UIFontDescriptorSystemDesignRounded` */
     rounded: 'ui-rounded',
-    /** iOS `UIFontDescriptorSystemDesignMonospaced` */
     mono: 'ui-monospace',
   },
   default: {

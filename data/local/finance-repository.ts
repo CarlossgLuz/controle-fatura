@@ -1,6 +1,7 @@
 import AsyncStorage from 'expo-sqlite/kv-store';
 
 import {
+  DEFAULT_CATEGORIES,
   createBudgetConfig,
   createRecurringEntry,
   createTransaction,
@@ -18,6 +19,7 @@ import type {
   MonthKey,
   NewRecurringEntryInput,
   NewTransactionInput,
+  Category,
   RecurringEntry,
   Transaction,
 } from '@/domain/finance/types';
@@ -26,6 +28,7 @@ const TRANSACTIONS_KEY = 'finance.transactions.v1';
 const RECURRING_KEY = 'finance.recurring.v1';
 const BUDGET_KEY = 'finance.budget.v1';
 const CARD_CONFIG_KEY = 'finance.card-config.v1';
+const CUSTOM_CATEGORIES_KEY = 'finance.categories.v1';
 
 function generateId(prefix: string): string {
   return `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
@@ -173,4 +176,82 @@ export async function updateCardConfig(
 
 export async function resetCardConfig(): Promise<void> {
   await writeJson(CARD_CONFIG_KEY, DEFAULT_CARD_CONFIG);
+}
+
+function normalizeCategoryName(value: string): string {
+  return value.trim().replace(/\s+/g, ' ');
+}
+
+function categoryIdFromName(kind: Category['kind'], name: string, usage: NonNullable<Category['usage']>) {
+  const slug = name
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+
+  return `custom-${kind}-${usage}-${slug || Date.now().toString(36)}`;
+}
+
+async function listStoredCategories(): Promise<Category[]> {
+  return readJson<Category[]>(CUSTOM_CATEGORIES_KEY, []);
+}
+
+export async function listCategories(): Promise<Category[]> {
+  const custom = await listStoredCategories();
+  const map = new Map<string, Category>();
+
+  for (const entry of DEFAULT_CATEGORIES) {
+    map.set(entry.id, entry);
+  }
+
+  for (const entry of custom) {
+    map.set(entry.id, entry);
+  }
+
+  return [...map.values()]
+    .filter((entry) => entry.active)
+    .sort((a, b) => {
+      if (a.system === b.system) {
+        return a.name.localeCompare(b.name);
+      }
+      return a.system ? -1 : 1;
+    });
+}
+
+export async function createCustomCategory(input: {
+  name: string;
+  kind: Category['kind'];
+  usage?: Category['usage'];
+}): Promise<Category> {
+  const normalizedName = normalizeCategoryName(input.name);
+  if (!normalizedName) {
+    throw new Error('Nome da categoria é obrigatório.');
+  }
+
+  const usage: NonNullable<Category['usage']> = input.kind === 'income' ? 'all' : input.usage ?? 'all';
+  const allCategories = await listCategories();
+  const existing = allCategories.find(
+    (entry) =>
+      entry.kind === input.kind &&
+      (entry.usage ?? 'all') === usage &&
+      entry.name.toLowerCase() === normalizedName.toLowerCase()
+  );
+
+  if (existing) {
+    return existing;
+  }
+
+  const custom = await listStoredCategories();
+  const next: Category = {
+    id: categoryIdFromName(input.kind, normalizedName, usage),
+    name: normalizedName,
+    kind: input.kind,
+    usage,
+    system: false,
+    active: true,
+  };
+
+  await writeJson(CUSTOM_CATEGORIES_KEY, [next, ...custom]);
+  return next;
 }

@@ -13,6 +13,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { criarEInserirCompra, editarCompra, obterCompraPorId } from '@/data/sqlite';
+import { DatePickerField } from '@/components/app';
 import {
   CATEGORIAS_COMPRA,
   buildDefaultCompraFormValues,
@@ -205,14 +206,10 @@ export default function CompraScreen() {
               />
               <ErrorText message={errors.valor} color={colors.danger} />
 
-              <Text style={themedStyles.label}>Data da compra (YYYY-MM-DD) *</Text>
-              <TextInput
+              <DatePickerField
+                label="Data da compra *"
                 value={form.dataCompra}
-                onChangeText={(value) => onField('dataCompra', value)}
-                placeholder="2026-03-08"
-                placeholderTextColor={colors.textMuted}
-                returnKeyType="next"
-                style={themedStyles.input}
+                onChange={(value) => onField('dataCompra', value)}
               />
               <ErrorText message={errors.dataCompra} color={colors.danger} />
 

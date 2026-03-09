@@ -1,19 +1,22 @@
-import { useMemo, useState } from 'react';
-import {
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
+import {
+  AppHeader,
+  AppScreen,
+  CategoryQuickAdd,
+  DatePickerField,
+  EmptyState,
+  SectionHeader,
+} from '@/components/app';
 import { Radius, Spacing } from '@/constants/theme';
-import { addRecurringEntry, addTransaction } from '@/data/local/finance-repository';
-import { DEFAULT_CATEGORIES } from '@/domain/finance';
+import {
+  addRecurringEntry,
+  addTransaction,
+  createCustomCategory,
+  listCategories,
+} from '@/data/local/finance-repository';
+import { listCategoriesByUsage, type Category } from '@/domain/finance';
 import { DEFAULT_CARD_CONFIG } from '@/domain/finance/types';
 import { useAppTheme } from '@/hooks/use-app-theme';
 
@@ -23,16 +26,16 @@ interface LaunchForm {
   type: LaunchType;
   amount: string;
   description: string;
-  date: string;
+  date: `${number}-${number}-${number}`;
   dayOfMonth: string;
   categoryId: string;
 }
 
-function toIsoToday(date = new Date()): string {
+function toIsoToday(date = new Date()): `${number}-${number}-${number}` {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
+  return `${year}-${month}-${day}` as `${number}-${number}-${number}`;
 }
 
 function toMonthKey(date = new Date()): `${number}-${number}` {
@@ -47,11 +50,17 @@ function parseAmount(raw: string): number {
   return Number.isFinite(parsed) ? parsed : NaN;
 }
 
-export default function LancarScreen() {
-  const insets = useSafeAreaInsets();
-  const { colors, mode } = useAppTheme();
-  const styles = createStyles(colors, insets.bottom, insets.top, mode === 'dark');
+function usageFromType(type: LaunchType): 'income' | 'expense' | 'fixed' {
+  if (type === 'receita') return 'income';
+  if (type === 'fixo') return 'fixed';
+  return 'expense';
+}
 
+export default function LancarScreen() {
+  const { colors, mode } = useAppTheme();
+  const styles = createStyles(colors, mode === 'dark');
+
+  const [categories, setCategories] = useState<Category[]>([]);
   const [form, setForm] = useState<LaunchForm>({
     type: 'gasto',
     amount: '',
@@ -61,13 +70,36 @@ export default function LancarScreen() {
     categoryId: 'expense-other',
   });
   const [saving, setSaving] = useState(false);
+  const [loadingCategories, setLoadingCategories] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
+  const loadCategories = useCallback(async () => {
+    setLoadingCategories(true);
+    try {
+      const data = await listCategories();
+      setCategories(data);
+    } catch {
+      setError('Não foi possível carregar categorias.');
+    } finally {
+      setLoadingCategories(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadCategories();
+  }, [loadCategories]);
+
   const categoryOptions = useMemo(() => {
-    const kind = form.type === 'receita' ? 'income' : 'expense';
-    return DEFAULT_CATEGORIES.filter((entry) => entry.kind === kind && entry.active);
-  }, [form.type]);
+    return listCategoriesByUsage(categories, usageFromType(form.type));
+  }, [categories, form.type]);
+
+  useEffect(() => {
+    if (!categoryOptions.find((entry) => entry.id === form.categoryId)) {
+      const fallback = categoryOptions[0]?.id ?? (form.type === 'receita' ? 'income-salary' : 'expense-other');
+      setForm((prev) => ({ ...prev, categoryId: fallback }));
+    }
+  }, [categoryOptions, form.categoryId, form.type]);
 
   const onField = <K extends keyof LaunchForm>(key: K, value: LaunchForm[K]) => {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -76,13 +108,13 @@ export default function LancarScreen() {
   };
 
   const validate = (): string | null => {
-    if (form.description.trim().length === 0) {
-      return 'Descrição é obrigatória.';
-    }
+    if (!form.description.trim()) return 'Descrição é obrigatória.';
 
     const amount = parseAmount(form.amount);
-    if (!Number.isFinite(amount) || amount <= 0) {
-      return 'Informe um valor válido.';
+    if (!Number.isFinite(amount) || amount <= 0) return 'Informe um valor válido.';
+
+    if (!categoryOptions.find((entry) => entry.id === form.categoryId)) {
+      return 'Selecione uma categoria válida.';
     }
 
     if (form.type === 'fixo') {
@@ -90,8 +122,6 @@ export default function LancarScreen() {
       if (!Number.isInteger(day) || day < 1 || day > 31) {
         return 'Dia do mês inválido para lançamento fixo.';
       }
-    } else if (!/^\d{4}-\d{2}-\d{2}$/.test(form.date)) {
-      return 'Data inválida. Use YYYY-MM-DD.';
     }
 
     return null;
@@ -127,7 +157,7 @@ export default function LancarScreen() {
           cardId: DEFAULT_CARD_CONFIG.id,
           kind: form.type === 'receita' ? 'income' : 'expense',
           amount,
-          date: form.date as `${number}-${number}-${number}`,
+          date: form.date,
           categoryId: form.categoryId,
           description: form.description.trim(),
           notes: undefined,
@@ -135,7 +165,7 @@ export default function LancarScreen() {
         });
       }
 
-      setSuccess(form.type === 'fixo' ? 'Fixo salvo.' : 'Movimentação salva.');
+      setSuccess(form.type === 'fixo' ? 'Fixo salvo no Planejamento.' : 'Lançamento salvo.');
       setForm((prev) => ({
         ...prev,
         amount: '',
@@ -151,155 +181,130 @@ export default function LancarScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.screen} edges={['top']}>
-      <KeyboardAvoidingView
-        style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={insets.top + 8}>
-        <ScrollView
-          contentContainerStyle={styles.content}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled">
-          <Text style={styles.title}>Lançar</Text>
-          <Text style={styles.subtitle}>Receita, gasto ou fixo com poucos campos.</Text>
+    <AppScreen
+      keyboardAware
+      footer={
+        <Pressable
+          style={[styles.saveButton, saving && styles.saveButtonDisabled]}
+          onPress={onSave}
+          disabled={saving}>
+          <Text style={styles.saveButtonText}>{saving ? 'Salvando...' : 'Salvar lançamento'}</Text>
+        </Pressable>
+      }>
+      <AppHeader
+        eyebrow="Fluxo guiado"
+        title="Lançar"
+        subtitle="Escolha o tipo e preencha só o necessário."
+      />
 
-          <View style={styles.typeRow}>
-            {(['receita', 'gasto', 'fixo'] as LaunchType[]).map((item) => {
-              const active = form.type === item;
+      <View style={styles.typeRow}>
+        {(['receita', 'gasto', 'fixo'] as LaunchType[]).map((item) => {
+          const active = form.type === item;
+          return (
+            <Pressable
+              key={item}
+              style={[styles.typeChip, active && styles.typeChipActive]}
+              onPress={() => onField('type', item)}>
+              <Text style={[styles.typeChipText, active && styles.typeChipTextActive]}>
+                {item === 'receita' ? 'Receita' : item === 'gasto' ? 'Gasto' : 'Fixo'}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
+
+      <View style={styles.card}>
+        <SectionHeader
+          title={form.type === 'fixo' ? 'Novo fixo' : 'Novo lançamento'}
+          subtitle={form.type === 'fixo' ? 'Será repetido mensalmente.' : 'Entra no mês atual.'}
+        />
+
+        <Text style={styles.label}>Valor</Text>
+        <TextInput
+          value={form.amount}
+          onChangeText={(value) => onField('amount', value)}
+          placeholder="0,00"
+          placeholderTextColor={colors.textMuted}
+          keyboardType="decimal-pad"
+          style={styles.input}
+        />
+
+        <Text style={styles.label}>Descrição</Text>
+        <TextInput
+          value={form.description}
+          onChangeText={(value) => onField('description', value)}
+          placeholder="Ex: Mercado, salário, aluguel"
+          placeholderTextColor={colors.textMuted}
+          style={styles.input}
+        />
+
+        {form.type === 'fixo' ? (
+          <>
+            <Text style={styles.label}>Dia do mês</Text>
+            <TextInput
+              value={form.dayOfMonth}
+              onChangeText={(value) => onField('dayOfMonth', value)}
+              placeholder="Ex: 10"
+              placeholderTextColor={colors.textMuted}
+              keyboardType="number-pad"
+              style={styles.input}
+            />
+          </>
+        ) : (
+          <DatePickerField label="Data" value={form.date} onChange={(value) => onField('date', value)} />
+        )}
+
+        <Text style={styles.label}>Categoria</Text>
+
+        {loadingCategories ? (
+          <Text style={styles.helperText}>Carregando categorias...</Text>
+        ) : categoryOptions.length === 0 ? (
+          <EmptyState
+            title="Sem categorias"
+            description="Crie uma categoria para esse tipo e continue o lançamento."
+          />
+        ) : (
+          <View style={styles.chips}>
+            <CategoryQuickAdd
+              triggerMode="chip"
+              kind={form.type === 'receita' ? 'income' : 'expense'}
+              usage={form.type === 'receita' ? 'all' : form.type === 'fixo' ? 'fixed' : 'variable'}
+              onSave={async (name, kind, usage) => {
+                const created = await createCustomCategory({ name, kind, usage });
+                await loadCategories();
+                onField('categoryId', created.id);
+              }}
+            />
+            {categoryOptions.map((category) => {
+              const active = form.categoryId === category.id;
               return (
                 <Pressable
-                  key={item}
-                  style={[styles.typeChip, active && styles.typeChipActive]}
-                  onPress={() => {
-                    const nextCategory = item === 'receita' ? 'income-salary' : 'expense-other';
-                    onField('type', item);
-                    onField('categoryId', nextCategory);
-                  }}>
-                  <Text style={[styles.typeChipText, active && styles.typeChipTextActive]}>
-                    {item === 'receita' ? 'Receita' : item === 'gasto' ? 'Gasto' : 'Fixo'}
-                  </Text>
+                  key={category.id}
+                  style={[styles.chip, active && styles.chipActive]}
+                  onPress={() => onField('categoryId', category.id)}>
+                  <Text style={[styles.chipText, active && styles.chipTextActive]}>{category.name}</Text>
                 </Pressable>
               );
             })}
           </View>
+        )}
+      </View>
 
-          <View style={styles.card}>
-            <Text style={styles.label}>Valor</Text>
-            <TextInput
-              value={form.amount}
-              onChangeText={(value) => onField('amount', value)}
-              placeholder="0,00"
-              placeholderTextColor={colors.textMuted}
-              keyboardType="decimal-pad"
-              style={styles.input}
-            />
-
-            <Text style={styles.label}>Descrição</Text>
-            <TextInput
-              value={form.description}
-              onChangeText={(value) => onField('description', value)}
-              placeholder="Ex: Mercado, salário, aluguel"
-              placeholderTextColor={colors.textMuted}
-              style={styles.input}
-            />
-
-            {form.type === 'fixo' ? (
-              <>
-                <Text style={styles.label}>Dia do mês</Text>
-                <TextInput
-                  value={form.dayOfMonth}
-                  onChangeText={(value) => onField('dayOfMonth', value)}
-                  placeholder="Ex: 10"
-                  placeholderTextColor={colors.textMuted}
-                  keyboardType="number-pad"
-                  style={styles.input}
-                />
-              </>
-            ) : (
-              <>
-                <Text style={styles.label}>Data (YYYY-MM-DD)</Text>
-                <TextInput
-                  value={form.date}
-                  onChangeText={(value) => onField('date', value)}
-                  placeholder="2026-03-08"
-                  placeholderTextColor={colors.textMuted}
-                  style={styles.input}
-                />
-              </>
-            )}
-
-            <Text style={styles.label}>Categoria</Text>
-            <View style={styles.chips}>
-              {categoryOptions.map((category) => {
-                const active = form.categoryId === category.id;
-                return (
-                  <Pressable
-                    key={category.id}
-                    style={[styles.chip, active && styles.chipActive]}
-                    onPress={() => onField('categoryId', category.id)}>
-                    <Text style={[styles.chipText, active && styles.chipTextActive]}>
-                      {category.name}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-          </View>
-
-          {error ? <Text style={styles.errorText}>{error}</Text> : null}
-          {success ? <Text style={styles.successText}>{success}</Text> : null}
-        </ScrollView>
-
-        <View style={styles.footer}>
-          <Pressable
-            style={[styles.primaryButton, saving && styles.primaryButtonDisabled]}
-            onPress={onSave}
-            disabled={saving}>
-            <Text style={styles.primaryButtonText}>{saving ? 'Salvando...' : 'Salvar'}</Text>
-          </Pressable>
-        </View>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+      {error ? <Text style={[styles.feedback, { color: colors.expense }]}>{error}</Text> : null}
+      {success ? <Text style={[styles.feedback, { color: colors.income }]}>{success}</Text> : null}
+    </AppScreen>
   );
 }
 
-function createStyles(
-  colors: ReturnType<typeof useAppTheme>['colors'],
-  bottomInset: number,
-  topInset: number,
-  isDarkMode: boolean
-) {
+function createStyles(colors: ReturnType<typeof useAppTheme>['colors'], isDark: boolean) {
   return StyleSheet.create({
-    screen: {
-      flex: 1,
-      backgroundColor: colors.background,
-    },
-    flex: {
-      flex: 1,
-    },
-    content: {
-      paddingHorizontal: Spacing.xl,
-      paddingTop: Math.max(topInset * 0.15, Spacing.md),
-      paddingBottom: bottomInset + 104,
-      gap: Spacing.md,
-    },
-    title: {
-      color: colors.textPrimary,
-      fontSize: 30,
-      fontWeight: '700',
-    },
-    subtitle: {
-      color: colors.textSecondary,
-      fontSize: 14,
-      lineHeight: 20,
-    },
     typeRow: {
       flexDirection: 'row',
       gap: Spacing.sm,
     },
     typeChip: {
       flex: 1,
-      minHeight: 44,
+      minHeight: 46,
       borderRadius: Radius.md,
       borderWidth: 1,
       borderColor: colors.border,
@@ -324,13 +329,17 @@ function createStyles(
       borderColor: colors.border,
       borderWidth: 1,
       borderRadius: Radius.md,
-      padding: Spacing.lg,
+      padding: Spacing.md,
       gap: Spacing.sm,
     },
     label: {
       color: colors.textSecondary,
       fontSize: 13,
       marginTop: Spacing.xs,
+    },
+    helperText: {
+      color: colors.textMuted,
+      fontSize: 12,
     },
     input: {
       backgroundColor: colors.surfaceElevated,
@@ -366,34 +375,23 @@ function createStyles(
       fontWeight: '600',
     },
     chipTextActive: {
-      color: isDarkMode ? '#03111B' : '#FFFFFF',
+      color: isDark ? '#09111D' : '#FFFFFF',
     },
-    footer: {
-      position: 'absolute',
-      left: Spacing.xl,
-      right: Spacing.xl,
-      bottom: Math.max(bottomInset, Spacing.md),
-    },
-    errorText: {
-      color: colors.danger,
+    feedback: {
       fontSize: 13,
     },
-    successText: {
-      color: colors.success,
-      fontSize: 13,
-    },
-    primaryButton: {
-      minHeight: 48,
+    saveButton: {
+      minHeight: 50,
       borderRadius: Radius.md,
+      backgroundColor: colors.primary,
       alignItems: 'center',
       justifyContent: 'center',
-      backgroundColor: colors.primary,
     },
-    primaryButtonDisabled: {
+    saveButtonDisabled: {
       opacity: 0.75,
     },
-    primaryButtonText: {
-      color: isDarkMode ? '#03111B' : '#FFFFFF',
+    saveButtonText: {
+      color: '#FFFFFF',
       fontSize: 14,
       fontWeight: '700',
     },
