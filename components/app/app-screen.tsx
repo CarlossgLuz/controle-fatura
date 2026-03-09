@@ -2,6 +2,7 @@ import { type ReactNode } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View, type ViewStyle } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { AppCopyright } from '@/components/app/app-copyright';
 import { Spacing } from '@/constants/theme';
 import { useAppTheme } from '@/hooks/use-app-theme';
 
@@ -44,9 +45,13 @@ export function AppScreen({
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled">
             {children}
+            <AppCopyright />
           </ScrollView>
         ) : (
-          <View style={containerStyle}>{children}</View>
+          <View style={containerStyle}>
+            {children}
+            <AppCopyright />
+          </View>
         )}
 
         {footer ? (

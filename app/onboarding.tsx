@@ -2,6 +2,7 @@ import { useRouter } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { AppCopyright } from '@/components/app';
 import { setOnboardingDone } from '@/data/local/app-settings';
 import { Radius, Spacing } from '@/constants/theme';
 import { useAppTheme } from '@/hooks/use-app-theme';
@@ -34,6 +35,10 @@ export default function OnboardingScreen() {
         <Pressable style={styles.button} onPress={onContinue}>
           <Text style={styles.buttonText}>Começar</Text>
         </Pressable>
+
+        <View style={styles.footer}>
+          <AppCopyright />
+        </View>
       </View>
     </SafeAreaView>
   );
@@ -84,6 +89,9 @@ function createStyles(colors: ReturnType<typeof useAppTheme>['colors'], isDarkMo
       color: isDarkMode ? '#03111B' : '#FFFFFF',
       fontSize: 16,
       fontWeight: '700',
+    },
+    footer: {
+      marginTop: 'auto',
     },
   });
 }

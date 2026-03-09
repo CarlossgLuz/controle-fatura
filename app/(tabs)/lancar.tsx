@@ -206,12 +206,24 @@ export default function LancarScreen() {
       <View style={styles.typeRow}>
         {(['receita', 'gasto', 'fixo'] as LaunchType[]).map((item) => {
           const active = form.type === item;
+          const toneStyle =
+            item === 'receita'
+              ? styles.typeChipIncomeActive
+              : item === 'gasto'
+                ? styles.typeChipExpenseActive
+                : styles.typeChipFixedActive;
+          const toneTextStyle =
+            item === 'receita'
+              ? styles.typeChipIncomeTextActive
+              : item === 'gasto'
+                ? styles.typeChipExpenseTextActive
+                : styles.typeChipFixedTextActive;
           return (
             <Pressable
               key={item}
-              style={[styles.typeChip, active && styles.typeChipActive]}
+              style={[styles.typeChip, active && toneStyle]}
               onPress={() => onField('type', item)}>
-              <Text style={[styles.typeChipText, active && styles.typeChipTextActive]}>
+              <Text style={[styles.typeChipText, active && toneTextStyle]}>
                 {item === 'receita' ? 'Receita' : item === 'gasto' ? 'Gasto' : 'Fixo'}
               </Text>
             </Pressable>
@@ -326,17 +338,31 @@ function createStyles(colors: ReturnType<typeof useAppTheme>['colors'], isDark: 
       alignItems: 'center',
       justifyContent: 'center',
     },
-    typeChipActive: {
-      borderColor: colors.primary,
-      backgroundColor: colors.surfaceElevated,
+    typeChipIncomeActive: {
+      borderColor: `${colors.income}66`,
+      backgroundColor: `${colors.income}14`,
+    },
+    typeChipExpenseActive: {
+      borderColor: `${colors.expense}66`,
+      backgroundColor: `${colors.expense}12`,
+    },
+    typeChipFixedActive: {
+      borderColor: `${colors.warning}66`,
+      backgroundColor: `${colors.warning}14`,
     },
     typeChipText: {
       color: colors.textSecondary,
       fontSize: 13,
       fontWeight: '600',
     },
-    typeChipTextActive: {
-      color: colors.textPrimary,
+    typeChipIncomeTextActive: {
+      color: colors.income,
+    },
+    typeChipExpenseTextActive: {
+      color: colors.expense,
+    },
+    typeChipFixedTextActive: {
+      color: colors.warning,
     },
     card: {
       backgroundColor: colors.surface,

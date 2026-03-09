@@ -1,6 +1,7 @@
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { AppCopyright } from '@/components/app';
 import { Radius, Spacing } from '@/constants/theme';
 import { useAppTheme } from '@/hooks/use-app-theme';
 
@@ -23,6 +24,8 @@ export default function ExploreScreen() {
             O Clarium está configurado para controle local de compras com ciclo de fatura e SQLite.
           </Text>
         </View>
+
+        <AppCopyright />
       </ScrollView>
     </SafeAreaView>
   );

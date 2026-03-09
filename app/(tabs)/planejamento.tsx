@@ -1,7 +1,6 @@
 import { useFocusEffect } from '@react-navigation/native';
-import Constants from 'expo-constants';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Alert, Linking, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { AppHeader, AppScreen, CategoryQuickAdd, EmptyState, SectionHeader } from '@/components/app';
 import { IconSymbol } from '@/components/ui/icon-symbol';
@@ -105,7 +104,6 @@ function clampProgress(value: number): number {
 export default function PlanejamentoScreen() {
   const { colors, mode } = useAppTheme();
   const styles = createStyles(colors, mode === 'dark');
-  const appVersion = Constants.expoConfig?.version ?? '1.0.0';
 
   const [entries, setEntries] = useState<RecurringEntry[]>([]);
   const [allCategories, setAllCategories] = useState<Category[]>([]);
@@ -393,15 +391,6 @@ export default function PlanejamentoScreen() {
     ]);
   };
 
-  const onOpenLinkedIn = async () => {
-    const url = 'https://www.linkedin.com/in/dev-carlosgabriel/';
-    try {
-      await Linking.openURL(url);
-    } catch {
-      setError('Não foi possível abrir o LinkedIn agora.');
-    }
-  };
-
   return (
     <AppScreen keyboardAware>
       <AppHeader
@@ -453,6 +442,7 @@ export default function PlanejamentoScreen() {
               />
             </View>
             {budgetTarget ? <Text style={styles.goalPercent}>{budgetProgressPercent}% da meta</Text> : null}
+            <Text style={styles.fieldLabel}>Valor da meta</Text>
             <TextInput
               value={budgetInput}
               onChangeText={setBudgetInput}
@@ -473,6 +463,7 @@ export default function PlanejamentoScreen() {
 
           <View style={styles.card}>
             <SectionHeader title="Cartão" subtitle="Fechamento e vencimento" iconName="creditcard.fill" />
+            <Text style={styles.fieldLabel}>Nome do cartão</Text>
             <TextInput
               value={cardForm.name}
               onChangeText={(value) => setCardForm((prev) => ({ ...prev, name: value }))}
@@ -481,22 +472,28 @@ export default function PlanejamentoScreen() {
               style={styles.input}
             />
             <View style={styles.row}>
-              <TextInput
-                value={cardForm.closingDay}
-                onChangeText={(value) => setCardForm((prev) => ({ ...prev, closingDay: value }))}
-                placeholder="Fechamento"
-                placeholderTextColor={colors.textMuted}
-                keyboardType="number-pad"
-                style={[styles.input, styles.flex]}
-              />
-              <TextInput
-                value={cardForm.dueDay}
-                onChangeText={(value) => setCardForm((prev) => ({ ...prev, dueDay: value }))}
-                placeholder="Vencimento"
-                placeholderTextColor={colors.textMuted}
-                keyboardType="number-pad"
-                style={[styles.input, styles.flex]}
-              />
+              <View style={styles.fieldGroup}>
+                <Text style={styles.fieldLabel}>Dia de fechamento</Text>
+                <TextInput
+                  value={cardForm.closingDay}
+                  onChangeText={(value) => setCardForm((prev) => ({ ...prev, closingDay: value }))}
+                  placeholder="Fechamento"
+                  placeholderTextColor={colors.textMuted}
+                  keyboardType="number-pad"
+                  style={styles.input}
+                />
+              </View>
+              <View style={styles.fieldGroup}>
+                <Text style={styles.fieldLabel}>Dia de vencimento</Text>
+                <TextInput
+                  value={cardForm.dueDay}
+                  onChangeText={(value) => setCardForm((prev) => ({ ...prev, dueDay: value }))}
+                  placeholder="Vencimento"
+                  placeholderTextColor={colors.textMuted}
+                  keyboardType="number-pad"
+                  style={styles.input}
+                />
+              </View>
             </View>
             <View style={styles.row}>
               <Pressable style={styles.primaryButton} onPress={onSaveCard} disabled={saving}>
@@ -531,6 +528,7 @@ export default function PlanejamentoScreen() {
               })}
             </View>
 
+            <Text style={styles.fieldLabel}>Descrição</Text>
             <TextInput
               value={recurringForm.description}
               onChangeText={(value) => setRecurringForm((prev) => ({ ...prev, description: value }))}
@@ -539,22 +537,28 @@ export default function PlanejamentoScreen() {
               style={styles.input}
             />
             <View style={styles.row}>
-              <TextInput
-                value={recurringForm.amount}
-                onChangeText={(value) => setRecurringForm((prev) => ({ ...prev, amount: value }))}
-                placeholder="Valor"
-                placeholderTextColor={colors.textMuted}
-                keyboardType="decimal-pad"
-                style={[styles.input, styles.flex]}
-              />
-              <TextInput
-                value={recurringForm.dayOfMonth}
-                onChangeText={(value) => setRecurringForm((prev) => ({ ...prev, dayOfMonth: value }))}
-                placeholder="Dia"
-                placeholderTextColor={colors.textMuted}
-                keyboardType="number-pad"
-                style={[styles.input, styles.dayInput]}
-              />
+              <View style={styles.fieldGroup}>
+                <Text style={styles.fieldLabel}>Valor</Text>
+                <TextInput
+                  value={recurringForm.amount}
+                  onChangeText={(value) => setRecurringForm((prev) => ({ ...prev, amount: value }))}
+                  placeholder="Valor"
+                  placeholderTextColor={colors.textMuted}
+                  keyboardType="decimal-pad"
+                  style={styles.input}
+                />
+              </View>
+              <View style={styles.dayGroup}>
+                <Text style={styles.fieldLabel}>Dia do mês</Text>
+                <TextInput
+                  value={recurringForm.dayOfMonth}
+                  onChangeText={(value) => setRecurringForm((prev) => ({ ...prev, dayOfMonth: value }))}
+                  placeholder="Dia"
+                  placeholderTextColor={colors.textMuted}
+                  keyboardType="number-pad"
+                  style={styles.input}
+                />
+              </View>
             </View>
 
             <Text style={styles.sectionLabel}>Categoria</Text>
@@ -700,18 +704,6 @@ export default function PlanejamentoScreen() {
             )}
           </View>
 
-          <View style={styles.aboutCard}>
-            <SectionHeader title="Sobre" subtitle="Autoria e licença" iconName="info.circle.fill" />
-            <Text style={styles.aboutText}>Desenvolvido por Carlos Gabriel</Text>
-
-            <Pressable style={styles.linkedinButton} onPress={onOpenLinkedIn}>
-              <IconSymbol name="link.circle.fill" size={16} color={colors.info} />
-              <Text style={styles.linkedinButtonText}>LinkedIn</Text>
-            </Pressable>
-
-            <Text style={styles.aboutMeta}>Versão {appVersion}</Text>
-            <Text style={styles.copyrightText}>© 2026 Carlos Gabriel. Todos os direitos reservados.</Text>
-          </View>
         </>
       ) : null}
 
@@ -816,11 +808,19 @@ function createStyles(colors: ReturnType<typeof useAppTheme>['colors'], isDarkMo
       gap: Spacing.sm,
       flexWrap: 'wrap',
     },
-    flex: {
+    fieldGroup: {
       flex: 1,
+      minWidth: 138,
+      gap: Spacing.xs,
     },
-    dayInput: {
-      width: 84,
+    dayGroup: {
+      width: 110,
+      gap: Spacing.xs,
+    },
+    fieldLabel: {
+      color: colors.textSecondary,
+      fontSize: 12,
+      fontWeight: '600',
     },
     input: {
       backgroundColor: colors.surfaceElevated,
@@ -1079,46 +1079,6 @@ function createStyles(colors: ReturnType<typeof useAppTheme>['colors'], isDarkMo
       color: colors.expense,
       fontSize: 11,
       fontWeight: '700',
-    },
-    aboutCard: {
-      backgroundColor: colors.surface,
-      borderColor: colors.border,
-      borderWidth: 1,
-      borderRadius: Radius.md,
-      padding: Spacing.md,
-      gap: Spacing.sm,
-    },
-    aboutText: {
-      color: colors.textPrimary,
-      fontSize: 13,
-      fontWeight: '600',
-    },
-    linkedinButton: {
-      minHeight: 36,
-      alignSelf: 'flex-start',
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: 6,
-      borderRadius: Radius.md,
-      borderWidth: 1,
-      borderColor: colors.border,
-      backgroundColor: colors.surfaceElevated,
-      paddingHorizontal: Spacing.md,
-    },
-    linkedinButtonText: {
-      color: colors.info,
-      fontSize: 12,
-      fontWeight: '700',
-    },
-    aboutMeta: {
-      color: colors.textSecondary,
-      fontSize: 12,
-    },
-    copyrightText: {
-      color: colors.textMuted,
-      fontSize: 11,
-      lineHeight: 16,
     },
     errorText: {
       color: colors.expense,

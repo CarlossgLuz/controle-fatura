@@ -250,13 +250,16 @@ function createStyles(colors: ReturnType<typeof useAppTheme>['colors']) {
     dayText: {
       color: colors.textPrimary,
       fontSize: 13,
+      lineHeight: 16,
+      fontWeight: '600',
+      textAlign: 'center',
+      includeFontPadding: false,
     },
     dayTextMuted: {
       color: colors.textMuted,
     },
     dayTextSelected: {
       color: '#FFFFFF',
-      fontWeight: '700',
     },
     todayButton: {
       alignSelf: 'flex-end',

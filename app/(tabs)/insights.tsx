@@ -1,9 +1,11 @@
 import { useFocusEffect } from '@react-navigation/native';
+import Constants from 'expo-constants';
 import { useCallback, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { getInsightsSnapshot } from '@/data/local/insights-dashboard';
 import { AppHeader, AppScreen, EmptyState, ProgressCard, SectionHeader } from '@/components/app';
+import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Radius, Spacing } from '@/constants/theme';
 import { useAppTheme } from '@/hooks/use-app-theme';
 
@@ -23,6 +25,7 @@ function formatPercent(value: number): string {
 export default function InsightsScreen() {
   const { colors } = useAppTheme();
   const styles = createStyles(colors);
+  const appVersion = Constants.expoConfig?.version ?? '1.0.0';
 
   const [snapshot, setSnapshot] = useState<InsightsSnapshot | null>(null);
   const [loading, setLoading] = useState(true);
@@ -54,6 +57,15 @@ export default function InsightsScreen() {
       loadInsights();
     }, [loadInsights])
   );
+
+  const onOpenLinkedIn = async () => {
+    const url = 'https://www.linkedin.com/in/dev-carlosgabriel/';
+    try {
+      await Linking.openURL(url);
+    } catch {
+      setError('Não foi possível abrir o LinkedIn agora.');
+    }
+  };
 
   const BarItem = ({
     label,
@@ -206,8 +218,21 @@ export default function InsightsScreen() {
               ))
             )}
           </View>
+
         </>
       ) : null}
+
+      <View style={styles.aboutCard}>
+        <SectionHeader title="Sobre" subtitle="Autoria e licença" iconName="info.circle.fill" />
+        <Text style={styles.aboutText}>Desenvolvido por Carlos Gabriel</Text>
+
+        <Pressable style={styles.linkedinButton} onPress={onOpenLinkedIn}>
+          <IconSymbol name="link.circle.fill" size={16} color={colors.info} />
+          <Text style={styles.linkedinButtonText}>LinkedIn</Text>
+        </Pressable>
+
+        <Text style={styles.aboutMeta}>Versão {appVersion}</Text>
+      </View>
 
       {error && snapshot ? (
         <Text style={[styles.inlineError, { color: colors.warning }]}>Dados podem estar desatualizados.</Text>
@@ -270,6 +295,41 @@ function createStyles(colors: ReturnType<typeof useAppTheme>['colors']) {
     barFill: {
       height: '100%',
       borderRadius: Radius.pill,
+    },
+    aboutCard: {
+      backgroundColor: colors.surface,
+      borderColor: colors.border,
+      borderWidth: 1,
+      borderRadius: Radius.md,
+      padding: Spacing.md,
+      gap: Spacing.sm,
+    },
+    aboutText: {
+      color: colors.textPrimary,
+      fontSize: 13,
+      fontWeight: '600',
+    },
+    linkedinButton: {
+      minHeight: 36,
+      alignSelf: 'flex-start',
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 6,
+      borderRadius: Radius.md,
+      borderWidth: 1,
+      borderColor: colors.border,
+      backgroundColor: colors.surfaceElevated,
+      paddingHorizontal: Spacing.md,
+    },
+    linkedinButtonText: {
+      color: colors.info,
+      fontSize: 12,
+      fontWeight: '700',
+    },
+    aboutMeta: {
+      color: colors.textSecondary,
+      fontSize: 12,
     },
   });
 }

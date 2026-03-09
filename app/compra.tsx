@@ -13,7 +13,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { criarEInserirCompra, editarCompra, obterCompraPorId } from '@/data/sqlite';
-import { DatePickerField } from '@/components/app';
+import { AppCopyright, DatePickerField } from '@/components/app';
 import {
   CATEGORIAS_COMPRA,
   buildDefaultCompraFormValues,
@@ -296,6 +296,8 @@ export default function CompraScreen() {
               </Pressable>
             </View>
           )}
+
+          <AppCopyright />
         </ScrollView>
       </KeyboardAvoidingView>
     </View>

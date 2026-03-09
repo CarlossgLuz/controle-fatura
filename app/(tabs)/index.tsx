@@ -5,6 +5,7 @@ import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-nati
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { excluirCompra, listarComprasDoCicloAtual } from '@/data/sqlite';
+import { AppCopyright } from '@/components/app';
 import { calcularCicloAtual, CARTAO_PADRAO, resumirComprasDoCiclo, type Compra } from '@/domain';
 import { Radius, Shadows, Spacing } from '@/constants/theme';
 import { useAppTheme } from '@/hooks/use-app-theme';
@@ -183,6 +184,8 @@ export default function HomeScreen() {
         <Pressable style={styles.ctaButton} onPress={() => router.push('/compra')}>
           <Text style={styles.ctaText}>Adicionar compra</Text>
         </Pressable>
+
+        <AppCopyright />
       </ScrollView>
     </SafeAreaView>
   );

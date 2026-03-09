@@ -2,6 +2,7 @@ import { Link } from 'expo-router';
 import { StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { AppCopyright } from '@/components/app';
 import { Radius, Spacing } from '@/constants/theme';
 import { useAppTheme } from '@/hooks/use-app-theme';
 
@@ -17,6 +18,9 @@ export default function ModalScreen() {
         <Link href="/" dismissTo style={styles.link}>
           <Text style={styles.linkText}>Voltar para início</Text>
         </Link>
+        <View style={styles.footer}>
+          <AppCopyright />
+        </View>
       </View>
     </SafeAreaView>
   );
@@ -58,6 +62,9 @@ function createStyles(colors: ReturnType<typeof useAppTheme>['colors']) {
       color: colors.primary,
       fontSize: 14,
       fontWeight: '600',
+    },
+    footer: {
+      marginTop: Spacing.md,
     },
   });
 }
