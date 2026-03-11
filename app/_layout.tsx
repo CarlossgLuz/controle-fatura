@@ -1,21 +1,105 @@
 import { Stack, useRouter, useSegments } from 'expo-router';
+import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
 import { Text, View } from 'react-native';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 
-import { isOnboardingDone } from '@/data/local/app-settings';
+import { BootScreen } from '@/components/app';
+import {
+  detectDeviceLanguage,
+  getResolvedLanguagePreference,
+  getThemePreference,
+  isOnboardingDone,
+  type AppLanguage,
+  type ThemePreference,
+} from '@/data/local/app-settings';
 import { initDatabase } from '@/data/sqlite';
+import { useI18n } from '@/hooks/use-i18n';
 import { useAppTheme } from '@/hooks/use-app-theme';
+import { AppPreferencesProvider } from '@/providers/app-preferences-provider';
+
+SplashScreen.preventAutoHideAsync().catch(() => {});
+
+interface RootLayoutContentProps {
+  appReady: boolean;
+  bootstrapFailed: boolean;
+  bootHold: boolean;
+  nativeSplashHidden: boolean;
+  onboardingReady: boolean;
+  databaseReady: boolean;
+  preferencesReady: boolean;
+  databaseError: string | null;
+}
+
+function RootLayoutContent({
+  appReady,
+  bootstrapFailed,
+  bootHold,
+  nativeSplashHidden,
+  onboardingReady,
+  databaseReady,
+  preferencesReady,
+  databaseError,
+}: RootLayoutContentProps) {
+  const { mode, colors } = useAppTheme();
+  const { strings } = useI18n();
+
+  const bootStageLabel = !preferencesReady
+    ? strings.boot.loadingPreferences
+    : !databaseReady
+      ? strings.boot.loadingDatabase
+      : !onboardingReady
+        ? strings.boot.loadingOnboarding
+        : strings.boot.finishing;
+
+  const shouldShowBoot = !appReady || !nativeSplashHidden || bootHold;
+
+  return (
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={[]}>
+      <StatusBar style={mode === 'dark' ? 'light' : 'dark'} />
+
+      {bootstrapFailed && nativeSplashHidden ? (
+        <View
+          style={{
+            flex: 1,
+            backgroundColor: colors.background,
+            alignItems: 'center',
+            justifyContent: 'center',
+            paddingHorizontal: 20,
+          }}>
+          <Text style={{ color: colors.expense, fontSize: 14, textAlign: 'center' }}>
+            {strings.layout.databaseInitError(databaseError ?? strings.common.unknownError)}
+          </Text>
+        </View>
+      ) : shouldShowBoot ? (
+        <BootScreen title={strings.boot.preparing} subtitle={strings.boot.subtitle} stageLabel={bootStageLabel} />
+      ) : (
+        <Stack
+          screenOptions={{
+            headerShown: false,
+            contentStyle: { backgroundColor: colors.background },
+            animation: 'fade',
+          }}
+        />
+      )}
+    </SafeAreaView>
+  );
+}
 
 export default function RootLayout() {
-  const { mode, colors } = useAppTheme();
   const router = useRouter();
   const segments = useSegments();
+
   const [databaseReady, setDatabaseReady] = useState(false);
   const [databaseError, setDatabaseError] = useState<string | null>(null);
   const [onboardingReady, setOnboardingReady] = useState(false);
   const [onboardingDone, setOnboardingDoneState] = useState(false);
+  const [preferencesReady, setPreferencesReady] = useState(false);
+  const [themePreference, setThemePreference] = useState<ThemePreference>('system');
+  const [language, setLanguage] = useState<AppLanguage>(() => detectDeviceLanguage());
+  const [nativeSplashHidden, setNativeSplashHidden] = useState(false);
+  const [bootHold, setBootHold] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
@@ -30,6 +114,7 @@ export default function RootLayout() {
         if (!cancelled) {
           const message = error instanceof Error ? error.message : 'erro desconhecido';
           setDatabaseError(message);
+          setDatabaseReady(false);
         }
         console.warn('Erro ao inicializar SQLite:', error);
       });
@@ -62,58 +147,111 @@ export default function RootLayout() {
   }, []);
 
   useEffect(() => {
-    if (!onboardingReady) return;
+    let cancelled = false;
 
-    const inOnboarding = segments[0] === 'onboarding';
-    if (!onboardingDone && !inOnboarding) {
-      router.replace('/onboarding');
-      return;
-    }
+    Promise.all([getThemePreference(), getResolvedLanguagePreference()])
+      .then(([savedTheme, savedLanguage]) => {
+        if (cancelled) return;
+        setThemePreference(savedTheme);
+        setLanguage(savedLanguage);
+      })
+      .catch((error) => {
+        console.warn('Erro ao carregar preferências locais:', error);
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setPreferencesReady(true);
+        }
+      });
 
-    if (onboardingDone && inOnboarding) {
-      router.replace('/(tabs)/inicio');
-    }
-  }, [onboardingDone, onboardingReady, router, segments]);
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
-  if (databaseError) {
-    return (
-      <SafeAreaProvider>
-        <StatusBar style={mode === 'dark' ? 'light' : 'dark'} />
-        <View
-          style={{
-            flex: 1,
-            backgroundColor: colors.background,
-            alignItems: 'center',
-            justifyContent: 'center',
-            paddingHorizontal: 20,
-          }}>
-          <Text style={{ color: colors.expense, fontSize: 14, textAlign: 'center' }}>
-            Não foi possível inicializar o banco local ({databaseError}).
-          </Text>
-        </View>
-      </SafeAreaProvider>
-    );
-  }
+  useEffect(() => {
+    if (!onboardingReady || !databaseReady) return;
 
-  if (!onboardingReady || !databaseReady) {
-    return (
-      <SafeAreaProvider>
-        <StatusBar style={mode === 'dark' ? 'light' : 'dark'} />
-        <View style={{ flex: 1, backgroundColor: colors.background }} />
-      </SafeAreaProvider>
-    );
-  }
+    let cancelled = false;
+
+    const syncRoute = async () => {
+      const persistedOnboarding = await isOnboardingDone().catch(() => onboardingDone);
+      if (cancelled) return;
+
+      if (persistedOnboarding !== onboardingDone) {
+        setOnboardingDoneState(persistedOnboarding);
+      }
+
+      const inOnboarding = segments[0] === 'onboarding';
+      if (!persistedOnboarding && !inOnboarding) {
+        router.replace('/onboarding');
+        return;
+      }
+
+      if (persistedOnboarding && inOnboarding) {
+        router.replace('/(tabs)/inicio');
+      }
+    };
+
+    void syncRoute();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [databaseReady, onboardingDone, onboardingReady, router, segments]);
+
+  const appReady = onboardingReady && databaseReady && preferencesReady && !databaseError;
+  const bootstrapFailed = Boolean(databaseError) && onboardingReady && preferencesReady;
+  const canHideNativeSplash = appReady || bootstrapFailed;
+
+  useEffect(() => {
+    if (!canHideNativeSplash || nativeSplashHidden) return;
+
+    let cancelled = false;
+
+    const hideNativeSplash = async () => {
+      try {
+        await SplashScreen.hideAsync();
+      } catch (error) {
+        console.warn('Erro ao ocultar splash nativa:', error);
+      } finally {
+        if (!cancelled) {
+          setNativeSplashHidden(true);
+        }
+      }
+    };
+
+    void hideNativeSplash();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [canHideNativeSplash, nativeSplashHidden]);
+
+  useEffect(() => {
+    if (!appReady || !nativeSplashHidden) return;
+
+    const timer = setTimeout(() => {
+      setBootHold(false);
+    }, 420);
+
+    return () => clearTimeout(timer);
+  }, [appReady, nativeSplashHidden]);
 
   return (
     <SafeAreaProvider>
-      <StatusBar style={mode === 'dark' ? 'light' : 'dark'} />
-      <Stack
-        screenOptions={{
-          headerShown: false,
-          contentStyle: { backgroundColor: colors.background },
-          animation: 'fade',
-        }}
-      />
+      <AppPreferencesProvider initialLanguage={language} initialThemePreference={themePreference}>
+        <RootLayoutContent
+          appReady={appReady}
+          bootstrapFailed={bootstrapFailed}
+          bootHold={bootHold}
+          nativeSplashHidden={nativeSplashHidden}
+          onboardingReady={onboardingReady}
+          databaseReady={databaseReady}
+          preferencesReady={preferencesReady}
+          databaseError={databaseError}
+        />
+      </AppPreferencesProvider>
     </SafeAreaProvider>
   );
 }

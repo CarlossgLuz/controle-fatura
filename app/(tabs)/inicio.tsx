@@ -15,27 +15,13 @@ import {
 } from '@/components/app';
 import { Radius, Spacing } from '@/constants/theme';
 import { useAppTheme } from '@/hooks/use-app-theme';
+import { useI18n } from '@/hooks/use-i18n';
 
 type HomeSnapshot = Awaited<ReturnType<typeof getHomeDashboardSnapshot>>;
 
-function formatCurrency(value: number): string {
-  return value.toLocaleString('pt-BR', {
-    style: 'currency',
-    currency: 'BRL',
-  });
-}
-
-function formatDate(isoDate: string): string {
-  const [year, month, day] = isoDate.split('-');
-  return `${day}/${month}/${year}`;
-}
-
-function signedAmount(kind: 'income' | 'expense', amount: number): string {
-  return `${kind === 'income' ? '+' : '-'} ${formatCurrency(amount)}`;
-}
-
 export default function InicioScreen() {
   const { colors } = useAppTheme();
+  const { strings, formatCurrency, formatIsoDate, resolveSignedAmount } = useI18n();
   const styles = createStyles(colors);
 
   const [snapshot, setSnapshot] = useState<HomeSnapshot | null>(null);
@@ -55,13 +41,13 @@ export default function InicioScreen() {
         movements: data.recentMovements.length,
       });
     } catch (cause) {
-      const message = cause instanceof Error ? cause.message : 'erro desconhecido';
+      const message = cause instanceof Error ? cause.message : strings.common.unknownError;
       console.warn('[inicio] loadDashboard:error', message);
-      setError(`Não foi possível carregar os dados de início (${message}).`);
+      setError(strings.home.loadError(message));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [strings.common.unknownError, strings.home]);
 
   useFocusEffect(
     useCallback(() => {
@@ -74,22 +60,22 @@ export default function InicioScreen() {
   return (
     <AppScreen>
       <AppHeader
-        eyebrow="Visão mensal"
-        title="Início"
-        subtitle="Resumo direto do mês, sem ruído visual."
+        eyebrow={strings.home.eyebrow}
+        title={strings.home.title}
+        subtitle={strings.home.subtitle}
       />
 
       {loading && !snapshot ? (
         <View style={styles.cardLoading}>
-          <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Carregando dados...</Text>
+          <Text style={[styles.loadingText, { color: colors.textSecondary }]}>{strings.home.loading}</Text>
         </View>
       ) : null}
 
       {!loading && error && !snapshot ? (
         <EmptyState
-          title="Falha ao carregar"
-          description="Não conseguimos buscar os dados do mês agora."
-          actionLabel="Tentar novamente"
+          title={strings.home.loadFailedTitle}
+          description={strings.home.loadFailedDescription}
+          actionLabel={strings.common.tryAgain}
           onActionPress={loadDashboard}
         />
       ) : null}
@@ -97,7 +83,7 @@ export default function InicioScreen() {
       {snapshot ? (
         <>
           <SummaryCard
-            label={`Saldo de ${snapshot.monthLabel}`}
+            label={strings.home.monthBalanceLabel(snapshot.monthLabel)}
             value={formatCurrency(snapshot.monthBalance)}
             tone={monthTone}
             iconName="dollarsign.circle.fill"
@@ -105,13 +91,13 @@ export default function InicioScreen() {
 
           <View style={styles.row}>
             <MetricCard
-              label="Entradas"
+              label={strings.home.income}
               value={formatCurrency(snapshot.monthIncome)}
               iconName="plus.circle.fill"
               tone="income"
             />
             <MetricCard
-              label="Saídas"
+              label={strings.home.expense}
               value={formatCurrency(snapshot.monthExpense)}
               iconName="minus.circle.fill"
               tone="expense"
@@ -120,13 +106,13 @@ export default function InicioScreen() {
 
           <View style={styles.row}>
             <MetricCard
-              label="Fixos do mês"
+              label={strings.home.fixedMonth}
               value={formatCurrency(snapshot.monthFixedExpense)}
               iconName="pin.fill"
               tone="warning"
             />
             <MetricCard
-              label="Fatura atual"
+              label={strings.home.currentInvoice}
               value={formatCurrency(snapshot.currentCardInvoice)}
               iconName="creditcard.fill"
               tone="info"
@@ -134,41 +120,52 @@ export default function InicioScreen() {
           </View>
 
           <View style={styles.sectionCard}>
-            <SectionHeader title="Ciclo do cartão" subtitle="Cartão principal" iconName="creditcard.fill" />
+            <SectionHeader
+              title={strings.home.cardCycleTitle}
+              subtitle={strings.home.cardCycleSubtitle}
+              iconName="creditcard.fill"
+            />
             <View style={styles.cycleRow}>
               <View style={styles.cycleCol}>
-                <Text style={[styles.cycleLabel, { color: colors.textMuted }]}>Fechamento</Text>
+                <Text style={[styles.cycleLabel, { color: colors.textMuted }]}>{strings.home.closing}</Text>
                 <Text style={[styles.cycleValue, { color: colors.textPrimary }]}>
-                  {formatDate(snapshot.cardCycleClosing)}
+                  {formatIsoDate(snapshot.cardCycleClosing)}
                 </Text>
               </View>
               <View style={styles.cycleCol}>
-                <Text style={[styles.cycleLabel, { color: colors.textMuted }]}>Vencimento</Text>
+                <Text style={[styles.cycleLabel, { color: colors.textMuted }]}>{strings.home.due}</Text>
                 <Text style={[styles.cycleValue, { color: colors.textPrimary }]}>
-                  {formatDate(snapshot.cardCycleDue)}
+                  {formatIsoDate(snapshot.cardCycleDue)}
                 </Text>
               </View>
             </View>
           </View>
 
           <ProgressCard
-            title="Meta mensal"
+            title={strings.home.budgetTitle}
             subtitle={
               snapshot.budgetTarget > 0
-                ? `${formatCurrency(snapshot.monthExpense)} de ${formatCurrency(snapshot.budgetTarget)}`
-                : 'Defina uma meta no Planejamento para acompanhar.'
+                ? strings.home.budgetProgress(
+                    formatCurrency(snapshot.monthExpense),
+                    formatCurrency(snapshot.budgetTarget)
+                  )
+                : strings.home.budgetNoTarget
             }
             progress={snapshot.budgetProgress}
             iconName="target"
           />
 
           <View style={styles.sectionCard}>
-            <SectionHeader title="Últimos lançamentos" subtitle="Movimentações recentes do mês" iconName="info.circle.fill" />
+            <SectionHeader
+              title={strings.home.recentTitle}
+              subtitle={strings.home.recentSubtitle}
+              iconName="info.circle.fill"
+            />
 
             {snapshot.recentMovements.length === 0 ? (
               <EmptyState
-                title="Sem movimentações"
-                description="Use a aba Lançar para registrar a primeira receita ou gasto."
+                title={strings.home.emptyMovementsTitle}
+                description={strings.home.emptyMovementsDescription}
               />
             ) : (
               <View style={styles.list}>
@@ -176,8 +173,8 @@ export default function InicioScreen() {
                   <TransactionListItem
                     key={item.id}
                     title={item.title}
-                    meta={formatDate(item.date)}
-                    amount={signedAmount(item.kind, item.amount)}
+                    meta={formatIsoDate(item.date)}
+                    amount={resolveSignedAmount(item.kind, item.amount)}
                     kind={item.kind}
                   />
                 ))}
@@ -189,7 +186,7 @@ export default function InicioScreen() {
 
       {error && snapshot ? (
         <Pressable onPress={loadDashboard} style={styles.retryInline}>
-          <Text style={[styles.retryText, { color: colors.info }]}>Atualizar dados</Text>
+          <Text style={[styles.retryText, { color: colors.info }]}>{strings.home.refreshData}</Text>
         </Pressable>
       ) : null}
     </AppScreen>

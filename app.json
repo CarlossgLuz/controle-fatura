@@ -2,6 +2,7 @@
   "expo": {
     "name": "Clarium",
     "slug": "clarium",
+    "scheme": "clarium",
     "version": "1.0.0",
     "icon": "./assets/images/icon.png",
     "android": {

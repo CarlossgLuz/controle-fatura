@@ -9,3 +9,5 @@ export * from '@/components/app/progress-card';
 export * from '@/components/app/date-picker-field';
 export * from '@/components/app/category-quick-add';
 export * from '@/components/app/app-copyright';
+export * from '@/components/app/boot-screen';
+export * from '@/components/app/app-quick-settings';

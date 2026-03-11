@@ -26,6 +26,8 @@ const MAPPING = {
   'arrow.clockwise.circle.fill': 'autorenew',
   'info.circle.fill': 'info',
   'link.circle.fill': 'link',
+  'gearshape.fill': 'settings',
+  'checkmark': 'check',
   'eye.fill': 'visibility',
   'eye.slash.fill': 'visibility-off',
   'trash.fill': 'delete',

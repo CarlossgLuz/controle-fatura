@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Radius, Spacing } from '@/constants/theme';
+import { useI18n } from '@/hooks/use-i18n';
 import { useAppTheme } from '@/hooks/use-app-theme';
 
 interface DatePickerFieldProps {
@@ -9,8 +10,6 @@ interface DatePickerFieldProps {
   value: string;
   onChange: (value: `${number}-${number}-${number}`) => void;
 }
-
-const WEEK_DAYS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab'];
 
 function toIsoDate(date: Date): `${number}-${number}-${number}` {
   const year = date.getFullYear();
@@ -33,7 +32,8 @@ function sameDay(a: Date, b: Date): boolean {
 
 export function DatePickerField({ label, value, onChange }: DatePickerFieldProps) {
   const { colors } = useAppTheme();
-  const styles = createStyles(colors);
+  const { language, strings, formatMonthLabel, formatIsoDate } = useI18n();
+  const styles = createStyles(colors, language !== 'en');
 
   const selectedDate = useMemo(() => parseIsoDate(value), [value]);
   const [open, setOpen] = useState(false);
@@ -41,7 +41,7 @@ export function DatePickerField({ label, value, onChange }: DatePickerFieldProps
     new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1)
   );
 
-  const monthLabel = cursor.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+  const monthLabel = formatMonthLabel(cursor);
 
   const gridDates = useMemo(() => {
     const start = new Date(cursor.getFullYear(), cursor.getMonth(), 1);
@@ -69,16 +69,16 @@ export function DatePickerField({ label, value, onChange }: DatePickerFieldProps
     <View style={styles.container}>
       <Text style={styles.label}>{label}</Text>
       <Pressable style={styles.field} onPress={() => setOpen(true)}>
-        <Text style={styles.fieldText}>{selectedDate.toLocaleDateString('pt-BR')}</Text>
+        <Text style={styles.fieldText}>{formatIsoDate(value)}</Text>
       </Pressable>
 
       <Modal transparent visible={open} animationType="fade" onRequestClose={() => setOpen(false)}>
         <View style={styles.overlay}>
           <View style={styles.modalCard}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Selecionar data</Text>
+              <Text style={styles.modalTitle}>{strings.datePicker.selectDate}</Text>
               <Pressable onPress={() => setOpen(false)}>
-                <Text style={styles.modalClose}>Fechar</Text>
+                <Text style={styles.modalClose}>{strings.datePicker.close}</Text>
               </Pressable>
             </View>
 
@@ -97,7 +97,7 @@ export function DatePickerField({ label, value, onChange }: DatePickerFieldProps
             </View>
 
             <View style={styles.weekRow}>
-              {WEEK_DAYS.map((day) => (
+              {strings.datePicker.weekDays.map((day) => (
                 <Text key={day} style={styles.weekText}>
                   {day}
                 </Text>
@@ -134,7 +134,7 @@ export function DatePickerField({ label, value, onChange }: DatePickerFieldProps
                 setCursor(new Date(today.getFullYear(), today.getMonth(), 1));
                 setOpen(false);
               }}>
-              <Text style={styles.todayText}>Hoje</Text>
+              <Text style={styles.todayText}>{strings.datePicker.today}</Text>
             </Pressable>
           </View>
         </View>
@@ -143,7 +143,7 @@ export function DatePickerField({ label, value, onChange }: DatePickerFieldProps
   );
 }
 
-function createStyles(colors: ReturnType<typeof useAppTheme>['colors']) {
+function createStyles(colors: ReturnType<typeof useAppTheme>['colors'], capitalizeMonth: boolean) {
   return StyleSheet.create({
     container: {
       gap: Spacing.xs,
@@ -221,7 +221,7 @@ function createStyles(colors: ReturnType<typeof useAppTheme>['colors']) {
       color: colors.textPrimary,
       fontSize: 14,
       fontWeight: '700',
-      textTransform: 'capitalize',
+      textTransform: capitalizeMonth ? 'capitalize' : undefined,
     },
     weekRow: {
       flexDirection: 'row',

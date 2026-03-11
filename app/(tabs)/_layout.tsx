@@ -5,11 +5,13 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { HapticTab } from '@/components/haptic-tab';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Radius, Spacing } from '@/constants/theme';
+import { useI18n } from '@/hooks/use-i18n';
 import { useAppTheme } from '@/hooks/use-app-theme';
 
 export default function TabLayout() {
   const insets = useSafeAreaInsets();
   const { colors, legacyColors } = useAppTheme();
+  const { strings } = useI18n();
   const tabBarHeight = 58 + Math.max(insets.bottom, 8);
 
   return (
@@ -41,28 +43,28 @@ export default function TabLayout() {
       <Tabs.Screen
         name="inicio"
         options={{
-          title: 'Início',
+          title: strings.tabs.home,
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
         }}
       />
       <Tabs.Screen
         name="lancar"
         options={{
-          title: 'Lançar',
+          title: strings.tabs.launch,
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="plus.circle.fill" color={color} />,
         }}
       />
       <Tabs.Screen
         name="planejamento"
         options={{
-          title: 'Planejamento',
+          title: strings.tabs.planning,
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="calendar.circle.fill" color={color} />,
         }}
       />
       <Tabs.Screen
         name="insights"
         options={{
-          title: 'Insights',
+          title: strings.tabs.insights,
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="chart.bar.fill" color={color} />,
         }}
       />

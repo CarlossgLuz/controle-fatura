@@ -1,13 +1,13 @@
-import { Colors, getColorTokens, type ThemeMode } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useAppPreferences } from '@/providers/app-preferences-provider';
 
 export function useAppTheme() {
-  const systemScheme = useColorScheme();
-  const mode: ThemeMode = systemScheme === 'light' ? 'light' : 'dark';
+  const { mode, colors, legacyColors, themePreference, setThemePreference } = useAppPreferences();
 
   return {
     mode,
-    colors: getColorTokens(mode),
-    legacyColors: Colors[mode],
+    colors,
+    legacyColors,
+    themePreference,
+    setThemePreference,
   };
 }

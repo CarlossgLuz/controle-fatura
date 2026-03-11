@@ -1,31 +1,19 @@
 import { useFocusEffect } from '@react-navigation/native';
-import Constants from 'expo-constants';
 import { useCallback, useState } from 'react';
-import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
-import { getInsightsSnapshot } from '@/data/local/insights-dashboard';
 import { AppHeader, AppScreen, EmptyState, ProgressCard, SectionHeader } from '@/components/app';
-import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Radius, Spacing } from '@/constants/theme';
+import { getInsightsSnapshot } from '@/data/local/insights-dashboard';
+import { useI18n } from '@/hooks/use-i18n';
 import { useAppTheme } from '@/hooks/use-app-theme';
 
 type InsightsSnapshot = Awaited<ReturnType<typeof getInsightsSnapshot>>;
 
-function formatCurrency(value: number): string {
-  return value.toLocaleString('pt-BR', {
-    style: 'currency',
-    currency: 'BRL',
-  });
-}
-
-function formatPercent(value: number): string {
-  return `${Math.round(value * 100)}%`;
-}
-
 export default function InsightsScreen() {
   const { colors } = useAppTheme();
+  const { strings, formatCurrency, formatPercent } = useI18n();
   const styles = createStyles(colors);
-  const appVersion = Constants.expoConfig?.version ?? '1.0.0';
 
   const [snapshot, setSnapshot] = useState<InsightsSnapshot | null>(null);
   const [loading, setLoading] = useState(true);
@@ -44,28 +32,19 @@ export default function InsightsScreen() {
         categories: data.expensesByCategory.length,
       });
     } catch (cause) {
-      const message = cause instanceof Error ? cause.message : 'erro desconhecido';
+      const message = cause instanceof Error ? cause.message : strings.common.unknownError;
       console.warn('[insights] loadInsights:error', message);
-      setError(`Não foi possível carregar os insights (${message}).`);
+      setError(strings.insights.loadError(message));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [strings.common.unknownError, strings.insights]);
 
   useFocusEffect(
     useCallback(() => {
       loadInsights();
     }, [loadInsights])
   );
-
-  const onOpenLinkedIn = async () => {
-    const url = 'https://www.linkedin.com/in/dev-carlosgabriel/';
-    try {
-      await Linking.openURL(url);
-    } catch {
-      setError('Não foi possível abrir o LinkedIn agora.');
-    }
-  };
 
   const BarItem = ({
     label,
@@ -93,40 +72,36 @@ export default function InsightsScreen() {
 
   return (
     <AppScreen>
-      <AppHeader
-        eyebrow="Leitura analítica"
-        title="Insights"
-        subtitle="Comparativos simples para decidir próximos ajustes."
-      />
+      <AppHeader eyebrow={strings.insights.eyebrow} title={strings.insights.title} subtitle={strings.insights.subtitle} />
 
       {loading && !snapshot ? (
         <View style={styles.loadingCard}>
-          <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Carregando insights...</Text>
+          <Text style={[styles.loadingText, { color: colors.textSecondary }]}>{strings.insights.loading}</Text>
         </View>
       ) : null}
 
       {!loading && error && !snapshot ? (
         <EmptyState
-          title="Falha ao carregar"
-          description="Não foi possível montar os insights neste momento."
-          actionLabel="Tentar novamente"
+          title={strings.insights.loadFailedTitle}
+          description={strings.insights.loadFailedDescription}
+          actionLabel={strings.common.tryAgain}
           onActionPress={loadInsights}
         />
       ) : null}
 
       {snapshot && !snapshot.hasAnyData ? (
-        <EmptyState
-          title="Sem dados suficientes"
-          description="Registre receitas e gastos na aba Lançar para liberar estes insights."
-        />
+        <EmptyState title={strings.insights.noDataTitle} description={strings.insights.noDataDescription} />
       ) : null}
 
       {snapshot && snapshot.hasAnyData ? (
         <>
           <View style={styles.card}>
-            <SectionHeader title="Receitas vs gastos" subtitle="Equilíbrio mensal" />
+            <SectionHeader
+              title={strings.insights.sectionIncomeVsExpenseTitle}
+              subtitle={strings.insights.sectionIncomeVsExpenseSubtitle}
+            />
             <BarItem
-              label="Receitas"
+              label={strings.insights.incomeLabel}
               value={snapshot.incomeVsExpense.income}
               share={
                 snapshot.incomeVsExpense.income + snapshot.incomeVsExpense.expense > 0
@@ -137,7 +112,7 @@ export default function InsightsScreen() {
               color={colors.income}
             />
             <BarItem
-              label="Gastos"
+              label={strings.insights.expenseLabel}
               value={snapshot.incomeVsExpense.expense}
               share={
                 snapshot.incomeVsExpense.income + snapshot.incomeVsExpense.expense > 0
@@ -150,9 +125,9 @@ export default function InsightsScreen() {
           </View>
 
           <View style={styles.card}>
-            <SectionHeader title="Gastos por categoria" subtitle="Categorias com maior peso" />
+            <SectionHeader title={strings.insights.sectionCategoryTitle} subtitle={strings.insights.sectionCategorySubtitle} />
             {snapshot.expensesByCategory.length === 0 ? (
-              <Text style={[styles.placeholder, { color: colors.textSecondary }]}>Sem gastos no mês.</Text>
+              <Text style={[styles.placeholder, { color: colors.textSecondary }]}>{strings.insights.noExpenses}</Text>
             ) : (
               snapshot.expensesByCategory.map((item) => (
                 <BarItem
@@ -167,9 +142,12 @@ export default function InsightsScreen() {
           </View>
 
           <View style={styles.card}>
-            <SectionHeader title="Fixos vs variáveis" subtitle="Composição dos gastos" />
+            <SectionHeader
+              title={strings.insights.sectionFixedVariableTitle}
+              subtitle={strings.insights.sectionFixedVariableSubtitle}
+            />
             <BarItem
-              label="Fixos"
+              label={strings.insights.fixedLabel}
               value={snapshot.fixedVsVariable.fixed}
               share={
                 snapshot.fixedVsVariable.fixed + snapshot.fixedVsVariable.variable > 0
@@ -180,7 +158,7 @@ export default function InsightsScreen() {
               color={colors.warning}
             />
             <BarItem
-              label="Variáveis"
+              label={strings.insights.variableLabel}
               value={snapshot.fixedVsVariable.variable}
               share={
                 snapshot.fixedVsVariable.fixed + snapshot.fixedVsVariable.variable > 0
@@ -193,19 +171,22 @@ export default function InsightsScreen() {
           </View>
 
           <ProgressCard
-            title="Progresso da meta"
+            title={strings.insights.budgetTitle}
             subtitle={
               snapshot.budgetProgress.target > 0
-                ? `${formatCurrency(snapshot.budgetProgress.spent)} de ${formatCurrency(snapshot.budgetProgress.target)}`
-                : 'Meta mensal não definida no Planejamento.'
+                ? strings.insights.budgetProgress(
+                    formatCurrency(snapshot.budgetProgress.spent),
+                    formatCurrency(snapshot.budgetProgress.target)
+                  )
+                : strings.insights.budgetNoTarget
             }
             progress={snapshot.budgetProgress.progress}
           />
 
           <View style={styles.card}>
-            <SectionHeader title="Forma de pagamento" subtitle="Onde você mais concentra gastos" />
+            <SectionHeader title={strings.insights.sectionPaymentTitle} subtitle={strings.insights.sectionPaymentSubtitle} />
             {snapshot.paymentMethodUsage.length === 0 ? (
-              <Text style={[styles.placeholder, { color: colors.textSecondary }]}>Sem movimentações no mês.</Text>
+              <Text style={[styles.placeholder, { color: colors.textSecondary }]}>{strings.insights.noMovements}</Text>
             ) : (
               snapshot.paymentMethodUsage.map((item) => (
                 <BarItem
@@ -218,24 +199,11 @@ export default function InsightsScreen() {
               ))
             )}
           </View>
-
         </>
       ) : null}
 
-      <View style={styles.aboutCard}>
-        <SectionHeader title="Sobre" subtitle="Autoria e licença" iconName="info.circle.fill" />
-        <Text style={styles.aboutText}>Desenvolvido por Carlos Gabriel</Text>
-
-        <Pressable style={styles.linkedinButton} onPress={onOpenLinkedIn}>
-          <IconSymbol name="link.circle.fill" size={16} color={colors.info} />
-          <Text style={styles.linkedinButtonText}>LinkedIn</Text>
-        </Pressable>
-
-        <Text style={styles.aboutMeta}>Versão {appVersion}</Text>
-      </View>
-
       {error && snapshot ? (
-        <Text style={[styles.inlineError, { color: colors.warning }]}>Dados podem estar desatualizados.</Text>
+        <Text style={[styles.inlineError, { color: colors.warning }]}>{strings.insights.staleData}</Text>
       ) : null}
     </AppScreen>
   );
@@ -295,41 +263,6 @@ function createStyles(colors: ReturnType<typeof useAppTheme>['colors']) {
     barFill: {
       height: '100%',
       borderRadius: Radius.pill,
-    },
-    aboutCard: {
-      backgroundColor: colors.surface,
-      borderColor: colors.border,
-      borderWidth: 1,
-      borderRadius: Radius.md,
-      padding: Spacing.md,
-      gap: Spacing.sm,
-    },
-    aboutText: {
-      color: colors.textPrimary,
-      fontSize: 13,
-      fontWeight: '600',
-    },
-    linkedinButton: {
-      minHeight: 36,
-      alignSelf: 'flex-start',
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: 6,
-      borderRadius: Radius.md,
-      borderWidth: 1,
-      borderColor: colors.border,
-      backgroundColor: colors.surfaceElevated,
-      paddingHorizontal: Spacing.md,
-    },
-    linkedinButtonText: {
-      color: colors.info,
-      fontSize: 12,
-      fontWeight: '700',
-    },
-    aboutMeta: {
-      color: colors.textSecondary,
-      fontSize: 12,
     },
   });
 }

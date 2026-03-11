@@ -20,6 +20,7 @@ import {
 import { listCategoriesByUsage, type Category } from '@/domain/finance';
 import { DEFAULT_CARD_CONFIG } from '@/domain/finance/types';
 import { useAppTheme } from '@/hooks/use-app-theme';
+import { useI18n } from '@/hooks/use-i18n';
 
 type LaunchType = 'receita' | 'gasto' | 'fixo';
 
@@ -59,6 +60,7 @@ function usageFromType(type: LaunchType): 'income' | 'expense' | 'fixed' {
 
 export default function LancarScreen() {
   const { colors, mode } = useAppTheme();
+  const { strings } = useI18n();
   const styles = createStyles(colors, mode === 'dark');
 
   const [categories, setCategories] = useState<Category[]>([]);
@@ -81,11 +83,11 @@ export default function LancarScreen() {
       const data = await listCategories();
       setCategories(data);
     } catch {
-      setError('Não foi possível carregar categorias.');
+      setError(strings.launch.categoryLoadError);
     } finally {
       setLoadingCategories(false);
     }
-  }, []);
+  }, [strings.launch.categoryLoadError]);
 
   useEffect(() => {
     loadCategories();
@@ -114,19 +116,19 @@ export default function LancarScreen() {
   };
 
   const validate = (): string | null => {
-    if (!form.description.trim()) return 'Descrição é obrigatória.';
+    if (!form.description.trim()) return strings.launch.validationDescription;
 
     const amount = parseAmount(form.amount);
-    if (!Number.isFinite(amount) || amount <= 0) return 'Informe um valor válido.';
+    if (!Number.isFinite(amount) || amount <= 0) return strings.launch.validationAmount;
 
     if (!categoryOptions.find((entry) => entry.id === form.categoryId)) {
-      return 'Selecione uma categoria válida.';
+      return strings.launch.validationCategory;
     }
 
     if (form.type === 'fixo') {
       const day = Number(form.dayOfMonth);
       if (!Number.isInteger(day) || day < 1 || day > 31) {
-        return 'Dia do mês inválido para lançamento fixo.';
+        return strings.launch.validationDay;
       }
     }
 
@@ -171,7 +173,7 @@ export default function LancarScreen() {
         });
       }
 
-      setSuccess(form.type === 'fixo' ? 'Fixo salvo no Planejamento.' : 'Lançamento salvo.');
+      setSuccess(form.type === 'fixo' ? strings.launch.saveSuccessFixed : strings.launch.saveSuccessEntry);
       setForm((prev) => ({
         ...prev,
         amount: '',
@@ -180,7 +182,7 @@ export default function LancarScreen() {
         dayOfMonth: String(new Date().getDate()),
       }));
     } catch {
-      setError('Não foi possível salvar agora.');
+      setError(strings.launch.saveError);
     } finally {
       setSaving(false);
     }
@@ -194,13 +196,13 @@ export default function LancarScreen() {
           style={[styles.saveButton, saving && styles.saveButtonDisabled]}
           onPress={onSave}
           disabled={saving}>
-          <Text style={styles.saveButtonText}>{saving ? 'Salvando...' : 'Salvar lançamento'}</Text>
+          <Text style={styles.saveButtonText}>{saving ? strings.launch.saving : strings.launch.save}</Text>
         </Pressable>
       }>
       <AppHeader
-        eyebrow="Fluxo guiado"
-        title="Lançar"
-        subtitle="Escolha o tipo e preencha só o necessário."
+        eyebrow={strings.launch.eyebrow}
+        title={strings.launch.title}
+        subtitle={strings.launch.subtitle}
       />
 
       <View style={styles.typeRow}>
@@ -224,7 +226,7 @@ export default function LancarScreen() {
               style={[styles.typeChip, active && toneStyle]}
               onPress={() => onField('type', item)}>
               <Text style={[styles.typeChipText, active && toneTextStyle]}>
-                {item === 'receita' ? 'Receita' : item === 'gasto' ? 'Gasto' : 'Fixo'}
+                {item === 'receita' ? strings.launch.income : item === 'gasto' ? strings.launch.expense : strings.launch.fixed}
               </Text>
             </Pressable>
           );
@@ -233,53 +235,53 @@ export default function LancarScreen() {
 
       <View style={styles.card}>
         <SectionHeader
-          title={form.type === 'fixo' ? 'Novo fixo' : 'Novo lançamento'}
-          subtitle={form.type === 'fixo' ? 'Será repetido mensalmente.' : 'Entra no mês atual.'}
+          title={form.type === 'fixo' ? strings.launch.newFixedTitle : strings.launch.newEntryTitle}
+          subtitle={form.type === 'fixo' ? strings.launch.newFixedSubtitle : strings.launch.newEntrySubtitle}
         />
 
-        <Text style={styles.label}>Valor</Text>
+        <Text style={styles.label}>{strings.launch.amount}</Text>
         <TextInput
           value={form.amount}
           onChangeText={(value) => onField('amount', value)}
-          placeholder="0,00"
+          placeholder={strings.launch.valuePlaceholder}
           placeholderTextColor={colors.textMuted}
           keyboardType="decimal-pad"
           style={styles.input}
         />
 
-        <Text style={styles.label}>Descrição</Text>
+        <Text style={styles.label}>{strings.launch.description}</Text>
         <TextInput
           value={form.description}
           onChangeText={(value) => onField('description', value)}
-          placeholder="Ex: Mercado, salário, aluguel"
+          placeholder={strings.launch.descriptionPlaceholder}
           placeholderTextColor={colors.textMuted}
           style={styles.input}
         />
 
         {form.type === 'fixo' ? (
           <>
-            <Text style={styles.label}>Dia do mês</Text>
+            <Text style={styles.label}>{strings.launch.dayOfMonth}</Text>
             <TextInput
               value={form.dayOfMonth}
               onChangeText={(value) => onField('dayOfMonth', value)}
-              placeholder="Ex: 10"
+              placeholder={strings.launch.dayPlaceholder}
               placeholderTextColor={colors.textMuted}
               keyboardType="number-pad"
               style={styles.input}
             />
           </>
         ) : (
-          <DatePickerField label="Data" value={form.date} onChange={(value) => onField('date', value)} />
+          <DatePickerField label={strings.launch.date} value={form.date} onChange={(value) => onField('date', value)} />
         )}
 
-        <Text style={styles.label}>Categoria</Text>
+        <Text style={styles.label}>{strings.launch.category}</Text>
 
         {loadingCategories ? (
-          <Text style={styles.helperText}>Carregando categorias...</Text>
+          <Text style={styles.helperText}>{strings.launch.loadingCategories}</Text>
         ) : categoryOptions.length === 0 ? (
           <EmptyState
-            title="Sem categorias"
-            description="Crie uma categoria para esse tipo e continue o lançamento."
+            title={strings.launch.noCategoriesTitle}
+            description={strings.launch.noCategoriesDescription}
           />
         ) : (
           <View style={styles.chips}>
