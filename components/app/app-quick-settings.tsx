@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Linking, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { IconSymbol } from '@/components/ui/icon-symbol';
@@ -7,6 +7,8 @@ import { Radius, Spacing } from '@/constants/theme';
 import { type AppLanguage, type ThemePreference } from '@/data/local/app-settings';
 import { supportedLanguages, useI18n } from '@/hooks/use-i18n';
 import { useAppTheme } from '@/hooks/use-app-theme';
+import { openTrustedExternalUrl } from '@/utils/external-url';
+import { devWarn } from '@/utils/logger';
 
 const THEME_OPTIONS: ThemePreference[] = ['system', 'light', 'dark'];
 
@@ -20,12 +22,13 @@ export function AppQuickSettings() {
   const languageOptions: AppLanguage[] = supportedLanguages();
 
   const onOpenLinkedIn = async () => {
-    try {
-      await Linking.openURL('https://www.linkedin.com/in/dev-carlosgabriel/');
+    const opened = await openTrustedExternalUrl('https://www.linkedin.com/in/dev-carlosgabriel/');
+    if (opened) {
       setOpen(false);
-    } catch (error) {
-      console.warn('Erro ao abrir LinkedIn:', error);
+      return;
     }
+
+    devWarn('[settings] trusted external link blocked or unavailable');
   };
 
   return (
@@ -88,6 +91,8 @@ export function AppQuickSettings() {
               <IconSymbol name="link.circle.fill" size={15} color={colors.info} />
               <Text style={styles.linkedinText}>{strings.common.linkedIn}</Text>
             </Pressable>
+
+            <Text style={styles.localHint}>{strings.common.localFirstHint}</Text>
           </View>
         </View>
       </Modal>
@@ -186,6 +191,12 @@ function createStyles(colors: ReturnType<typeof useAppTheme>['colors']) {
       color: colors.info,
       fontSize: 12,
       fontWeight: '700',
+    },
+    localHint: {
+      color: colors.textMuted,
+      fontSize: 11,
+      textAlign: 'center',
+      marginTop: 2,
     },
   });
 }

@@ -7,6 +7,7 @@ import { Radius, Spacing } from '@/constants/theme';
 import { getInsightsSnapshot } from '@/data/local/insights-dashboard';
 import { useI18n } from '@/hooks/use-i18n';
 import { useAppTheme } from '@/hooks/use-app-theme';
+import { devInfo, devWarn } from '@/utils/logger';
 
 type InsightsSnapshot = Awaited<ReturnType<typeof getInsightsSnapshot>>;
 
@@ -20,21 +21,21 @@ export default function InsightsScreen() {
   const [error, setError] = useState<string | null>(null);
 
   const loadInsights = useCallback(async () => {
-    console.info('[insights] loadInsights:start');
+    devInfo('[insights] loadInsights:start');
     setLoading(true);
     setError(null);
 
     try {
       const data = await getInsightsSnapshot(new Date());
       setSnapshot(data);
-      console.info('[insights] loadInsights:ok', {
+      devInfo('[insights] loadInsights:ok', {
         monthKey: data.monthKey,
         categories: data.expensesByCategory.length,
       });
     } catch (cause) {
       const message = cause instanceof Error ? cause.message : strings.common.unknownError;
-      console.warn('[insights] loadInsights:error', message);
-      setError(strings.insights.loadError(message));
+      devWarn('[insights] loadInsights:error', message);
+      setError(__DEV__ ? strings.insights.loadError(message) : strings.insights.loadFailedDescription);
     } finally {
       setLoading(false);
     }

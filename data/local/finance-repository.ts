@@ -11,6 +11,7 @@ import {
   editTransaction,
 } from '@/domain/finance';
 import { DEFAULT_CARD_CONFIG } from '@/domain/finance/types';
+import { devWarn } from '@/utils/logger';
 import type {
   BudgetConfig,
   CardConfig,
@@ -165,7 +166,7 @@ export async function listTransactions(): Promise<Transaction[]> {
     .filter((entry): entry is { value: Transaction; changed: boolean } => Boolean(entry));
 
   if (sanitized.length !== data.length || sanitized.some((entry) => entry.changed)) {
-    console.warn('[transactions] invalid payload detected and sanitized', {
+    devWarn('[transactions] invalid payload detected and sanitized', {
       total: data.length,
       valid: sanitized.length,
     });
@@ -219,7 +220,7 @@ export async function listRecurringEntries(): Promise<RecurringEntry[]> {
     .filter((entry): entry is { value: RecurringEntry; changed: boolean } => Boolean(entry));
 
   if (sanitized.length !== data.length || sanitized.some((entry) => entry.changed)) {
-    console.warn('[recurring] invalid payload detected and sanitized', {
+    devWarn('[recurring] invalid payload detected and sanitized', {
       total: data.length,
       valid: sanitized.length,
     });
@@ -366,7 +367,7 @@ async function listStoredCategories(): Promise<Category[]> {
 
   // Keep storage healthy if we had invalid historical payloads.
   if (sanitized.length !== stored.length) {
-    console.warn('[categories] invalid custom categories detected and sanitized', {
+    devWarn('[categories] invalid custom categories detected and sanitized', {
       total: stored.length,
       valid: sanitized.length,
     });

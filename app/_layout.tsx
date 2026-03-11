@@ -18,6 +18,7 @@ import { initDatabase } from '@/data/sqlite';
 import { useI18n } from '@/hooks/use-i18n';
 import { useAppTheme } from '@/hooks/use-app-theme';
 import { AppPreferencesProvider } from '@/providers/app-preferences-provider';
+import { devWarn } from '@/utils/logger';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -69,7 +70,9 @@ function RootLayoutContent({
             paddingHorizontal: 20,
           }}>
           <Text style={{ color: colors.expense, fontSize: 14, textAlign: 'center' }}>
-            {strings.layout.databaseInitError(databaseError ?? strings.common.unknownError)}
+            {__DEV__
+              ? strings.layout.databaseInitError(databaseError ?? strings.common.unknownError)
+              : strings.layout.databaseInitErrorGeneric}
           </Text>
         </View>
       ) : shouldShowBoot ? (
@@ -116,7 +119,7 @@ export default function RootLayout() {
           setDatabaseError(message);
           setDatabaseReady(false);
         }
-        console.warn('Erro ao inicializar SQLite:', error);
+        devWarn('Erro ao inicializar SQLite:', error);
       });
 
     return () => {
@@ -133,7 +136,7 @@ export default function RootLayout() {
         setOnboardingDoneState(done);
       })
       .catch((error) => {
-        console.warn('Erro ao ler onboarding local:', error);
+        devWarn('Erro ao ler onboarding local:', error);
       })
       .finally(() => {
         if (!cancelled) {
@@ -156,7 +159,7 @@ export default function RootLayout() {
         setLanguage(savedLanguage);
       })
       .catch((error) => {
-        console.warn('Erro ao carregar preferências locais:', error);
+        devWarn('Erro ao carregar preferências locais:', error);
       })
       .finally(() => {
         if (!cancelled) {
@@ -213,7 +216,7 @@ export default function RootLayout() {
       try {
         await SplashScreen.hideAsync();
       } catch (error) {
-        console.warn('Erro ao ocultar splash nativa:', error);
+        devWarn('Erro ao ocultar splash nativa:', error);
       } finally {
         if (!cancelled) {
           setNativeSplashHidden(true);

@@ -6,6 +6,7 @@ export interface AppStrings {
     tryAgain: string;
     loading: string;
     appName: string;
+    localFirstHint: string;
     linkedIn: string;
     appVersion: (version: string) => string;
     copyright: (year: number) => string;
@@ -26,6 +27,7 @@ export interface AppStrings {
   };
   layout: {
     databaseInitError: (error: string) => string;
+    databaseInitErrorGeneric: string;
   };
   appearance: {
     sectionTitle: string;
@@ -147,6 +149,7 @@ export const translations: Record<AppLanguage, AppStrings> = {
       tryAgain: 'Tentar novamente',
       loading: 'Carregando...',
       appName: 'Clarium',
+      localFirstHint: 'Seus dados ficam no seu dispositivo.',
       linkedIn: 'LinkedIn',
       appVersion: (version: string) => `Versão ${version}`,
       copyright: (year: number) => `© ${year} Carlos Gabriel. Todos os direitos reservados.`,
@@ -167,6 +170,7 @@ export const translations: Record<AppLanguage, AppStrings> = {
     },
     layout: {
       databaseInitError: (error: string) => `Não foi possível inicializar o banco local (${error}).`,
+      databaseInitErrorGeneric: 'Não foi possível inicializar o app agora. Tente abrir novamente.',
     },
     appearance: {
       sectionTitle: 'Aparência e idioma',
@@ -299,6 +303,7 @@ export const translations: Record<AppLanguage, AppStrings> = {
       tryAgain: 'Try again',
       loading: 'Loading...',
       appName: 'Clarium',
+      localFirstHint: 'Your data stays on your device.',
       linkedIn: 'LinkedIn',
       appVersion: (version: string) => `Version ${version}`,
       copyright: (year: number) => `© ${year} Carlos Gabriel. All rights reserved.`,
@@ -319,6 +324,7 @@ export const translations: Record<AppLanguage, AppStrings> = {
     },
     layout: {
       databaseInitError: (error: string) => `Could not initialize local database (${error}).`,
+      databaseInitErrorGeneric: 'Could not initialize the app right now. Please try reopening it.',
     },
     appearance: {
       sectionTitle: 'Appearance and language',
@@ -446,6 +452,7 @@ export const translations: Record<AppLanguage, AppStrings> = {
       tryAgain: 'Intentar de nuevo',
       loading: 'Cargando...',
       appName: 'Clarium',
+      localFirstHint: 'Tus datos permanecen en tu dispositivo.',
       linkedIn: 'LinkedIn',
       appVersion: (version: string) => `Versión ${version}`,
       copyright: (year: number) => `© ${year} Carlos Gabriel. Todos los derechos reservados.`,
@@ -466,6 +473,7 @@ export const translations: Record<AppLanguage, AppStrings> = {
     },
     layout: {
       databaseInitError: (error: string) => `No se pudo inicializar la base local (${error}).`,
+      databaseInitErrorGeneric: 'No se pudo inicializar la app ahora. Intenta abrirla nuevamente.',
     },
     appearance: {
       sectionTitle: 'Apariencia e idioma',

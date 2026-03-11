@@ -16,6 +16,7 @@ import {
 import { Radius, Spacing } from '@/constants/theme';
 import { useAppTheme } from '@/hooks/use-app-theme';
 import { useI18n } from '@/hooks/use-i18n';
+import { devInfo, devWarn } from '@/utils/logger';
 
 type HomeSnapshot = Awaited<ReturnType<typeof getHomeDashboardSnapshot>>;
 
@@ -29,21 +30,21 @@ export default function InicioScreen() {
   const [error, setError] = useState<string | null>(null);
 
   const loadDashboard = useCallback(async () => {
-    console.info('[inicio] loadDashboard:start');
+    devInfo('[inicio] loadDashboard:start');
     setLoading(true);
     setError(null);
 
     try {
       const data = await getHomeDashboardSnapshot(new Date());
       setSnapshot(data);
-      console.info('[inicio] loadDashboard:ok', {
+      devInfo('[inicio] loadDashboard:ok', {
         monthKey: data.monthKey,
         movements: data.recentMovements.length,
       });
     } catch (cause) {
       const message = cause instanceof Error ? cause.message : strings.common.unknownError;
-      console.warn('[inicio] loadDashboard:error', message);
-      setError(strings.home.loadError(message));
+      devWarn('[inicio] loadDashboard:error', message);
+      setError(__DEV__ ? strings.home.loadError(message) : strings.home.loadFailedDescription);
     } finally {
       setLoading(false);
     }

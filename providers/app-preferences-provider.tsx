@@ -9,6 +9,7 @@ import {
 } from '@/data/local/app-settings';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { getStrings, type AppStrings } from '@/locales/translations';
+import { devWarn } from '@/utils/logger';
 
 interface AppPreferencesContextValue {
   language: AppLanguage;
@@ -53,7 +54,7 @@ export function AppPreferencesProvider({
     try {
       await persistLanguagePreference(value);
     } catch (error) {
-      console.warn('Erro ao persistir idioma:', error);
+      devWarn('Erro ao persistir idioma:', error);
     }
   }, []);
 
@@ -62,7 +63,7 @@ export function AppPreferencesProvider({
     try {
       await persistThemePreference(value);
     } catch (error) {
-      console.warn('Erro ao persistir tema:', error);
+      devWarn('Erro ao persistir tema:', error);
     }
   }, []);
 
