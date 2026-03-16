@@ -7,6 +7,10 @@ export interface DashboardMovement {
   date: string;
   kind: 'income' | 'expense';
   source: 'manual' | 'recurring' | 'card';
+  installment?: {
+    current: number;
+    total: number;
+  };
 }
 
 export interface FinanceDashboardSnapshot {
@@ -97,6 +101,12 @@ export function buildFinanceDashboardSnapshot(input: BuildDashboardInput): Finan
     date: entry.date,
     kind: entry.kind,
     source: entry.source,
+    installment: entry.installment
+      ? {
+          current: entry.installment.current,
+          total: entry.installment.total,
+        }
+      : undefined,
   }));
 
   const recentMovements = [...input.cardMovements, ...transactionMovements]

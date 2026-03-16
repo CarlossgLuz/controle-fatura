@@ -3,6 +3,7 @@ import AsyncStorage from 'expo-sqlite/kv-store';
 import {
   DEFAULT_CATEGORIES,
   createBudgetConfig,
+  createInstallmentTransactions,
   createRecurringEntry,
   createTransaction,
   editBudgetConfig,
@@ -23,6 +24,7 @@ import type {
   Category,
   RecurringEntry,
   Transaction,
+  TransactionInstallment,
 } from '@/domain/finance/types';
 
 const TRANSACTIONS_KEY = 'finance.transactions.v1';
@@ -65,6 +67,46 @@ function isIsoTimestamp(value: unknown): value is string {
   return typeof value === 'string' && value.length >= 10;
 }
 
+function sanitizeInstallment(raw: unknown): TransactionInstallment | undefined {
+  if (!raw || typeof raw !== 'object') return undefined;
+  const entry = raw as Partial<TransactionInstallment>;
+
+  if (
+    typeof entry.groupId !== 'string' ||
+    !entry.groupId ||
+    typeof entry.current !== 'number' ||
+    typeof entry.total !== 'number' ||
+    !Number.isInteger(entry.current) ||
+    !Number.isInteger(entry.total) ||
+    entry.current < 1 ||
+    entry.total < 2 ||
+    entry.current > entry.total
+  ) {
+    return undefined;
+  }
+
+  return {
+    current: entry.current,
+    total: entry.total,
+    groupId: entry.groupId,
+  };
+}
+
+function hasSameInstallment(
+  left: TransactionInstallment | undefined,
+  right: unknown
+): right is TransactionInstallment | undefined {
+  if (!left && !right) return true;
+  if (!left || !right || typeof right !== 'object') return false;
+
+  const entry = right as Partial<TransactionInstallment>;
+  return (
+    left.current === entry.current &&
+    left.total === entry.total &&
+    left.groupId === entry.groupId
+  );
+}
+
 function sanitizeStoredTransaction(
   raw: unknown,
   index: number
@@ -84,6 +126,7 @@ function sanitizeStoredTransaction(
   const cycleId = isMonthKey(entry.cycleId)
     ? entry.cycleId
     : (entry.date.slice(0, 7) as `${number}-${number}`);
+  const installment = sanitizeInstallment(entry.installment);
 
   const value: Transaction = {
     id: typeof entry.id === 'string' && entry.id ? entry.id : fallbackId,
@@ -95,6 +138,7 @@ function sanitizeStoredTransaction(
     categoryId: entry.categoryId,
     description: entry.description.trim(),
     notes: typeof entry.notes === 'string' && entry.notes.trim() ? entry.notes.trim() : undefined,
+    installment,
     source,
     recurringEntryId: typeof entry.recurringEntryId === 'string' ? entry.recurringEntryId : undefined,
     createdAt: isIsoTimestamp(entry.createdAt) ? entry.createdAt : nowIso,
@@ -106,6 +150,7 @@ function sanitizeStoredTransaction(
     entry.cardId !== DEFAULT_CARD_CONFIG.id ||
     entry.source !== source ||
     !isMonthKey(entry.cycleId) ||
+    !hasSameInstallment(installment, entry.installment) ||
     !isIsoTimestamp(entry.createdAt) ||
     !isIsoTimestamp(entry.updatedAt);
 
@@ -184,6 +229,22 @@ export async function addTransaction(input: NewTransactionInput): Promise<Transa
   const card = await getCardConfig();
   const created = createTransaction(input, card, { id: generateId('txn') });
   await writeJson(TRANSACTIONS_KEY, [created, ...current]);
+  return created;
+}
+
+export async function addInstallmentTransaction(
+  input: NewTransactionInput,
+  installmentTotal: number
+): Promise<Transaction[]> {
+  const current = await listTransactions();
+  const card = await getCardConfig();
+  const now = new Date();
+  const created = createInstallmentTransactions(input, installmentTotal, card, {
+    idPrefix: generateId('txn'),
+    groupId: generateId('installment'),
+    now,
+  });
+  await writeJson(TRANSACTIONS_KEY, [...created, ...current]);
   return created;
 }
 

@@ -1,4 +1,5 @@
 import { useFocusEffect } from '@react-navigation/native';
+import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
@@ -102,6 +103,7 @@ function clampProgress(value: number): number {
 }
 
 export default function PlanejamentoScreen() {
+  const params = useLocalSearchParams<{ section?: string }>();
   const { colors, mode } = useAppTheme();
   const styles = createStyles(colors, mode === 'dark');
 
@@ -218,6 +220,7 @@ export default function PlanejamentoScreen() {
   }, [allCategories, entries]);
 
   const visibleEntries = groupedEntries[activeSegment];
+  const highlightedSection = params.section === 'card' || params.section === 'budget' ? params.section : null;
 
   const onSaveBudget = async () => {
     const amount = parseAmount(budgetInput);
@@ -407,7 +410,7 @@ export default function PlanejamentoScreen() {
 
       {!loading ? (
         <>
-          <View style={styles.goalCard}>
+          <View style={[styles.goalCard, highlightedSection === 'budget' && styles.targetedCard]}>
             <SectionHeader title="Meta mensal" subtitle="Card principal do mês" iconName="target" />
             <Text style={styles.bigValue}>{budgetTarget ? formatCurrency(budgetTarget) : 'Sem meta mensal'}</Text>
             <View style={styles.goalSummaryRow}>
@@ -461,7 +464,7 @@ export default function PlanejamentoScreen() {
             </View>
           </View>
 
-          <View style={styles.card}>
+          <View style={[styles.card, highlightedSection === 'card' && styles.targetedCard]}>
             <SectionHeader title="Cartão" subtitle="Fechamento e vencimento" iconName="creditcard.fill" />
             <Text style={styles.fieldLabel}>Nome do cartão</Text>
             <TextInput
@@ -716,8 +719,8 @@ export default function PlanejamentoScreen() {
 function createStyles(colors: ReturnType<typeof useAppTheme>['colors'], isDarkMode: boolean) {
   return StyleSheet.create({
     goalCard: {
-      backgroundColor: `${colors.primary}10`,
-      borderColor: `${colors.primary}40`,
+      backgroundColor: colors.surface,
+      borderColor: colors.border,
       borderWidth: 1,
       borderRadius: Radius.md,
       padding: Spacing.md,
@@ -730,6 +733,10 @@ function createStyles(colors: ReturnType<typeof useAppTheme>['colors'], isDarkMo
       borderRadius: Radius.md,
       padding: Spacing.md,
       gap: Spacing.sm,
+    },
+    targetedCard: {
+      borderColor: colors.primary,
+      backgroundColor: colors.surfaceElevated,
     },
     loadingCard: {
       backgroundColor: colors.surface,

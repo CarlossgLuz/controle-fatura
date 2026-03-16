@@ -14,6 +14,10 @@ export interface MonthlyMovement {
   date: string;
   kind: 'income' | 'expense';
   source: 'manual' | 'recurring' | 'card';
+  installment?: {
+    current: number;
+    total: number;
+  };
 }
 
 export interface MonthlyAggregation {
@@ -177,6 +181,12 @@ export function aggregateMonthFinanceData(input: {
     date: entry.date,
     kind: entry.kind,
     source: entry.source,
+    installment: entry.installment
+      ? {
+          current: entry.installment.current,
+          total: entry.installment.total,
+        }
+      : undefined,
   }));
 
   const movementPurchases: MonthlyMovement[] = monthPurchases.map((entry, index) => ({
@@ -186,6 +196,12 @@ export function aggregateMonthFinanceData(input: {
     date: entry.dataCompra,
     kind: 'expense',
     source: 'card',
+    installment: entry.parcela
+      ? {
+          current: entry.parcela.atual,
+          total: entry.parcela.total,
+        }
+      : undefined,
   }));
 
   const recentMovements = uniqueMovementIds([...movementTransactions, ...movementPurchases])

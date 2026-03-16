@@ -12,6 +12,39 @@ interface CreateTransactionOptions {
   now?: Date;
 }
 
+interface CreateInstallmentTransactionsOptions {
+  idPrefix: string;
+  groupId: string;
+  now?: Date;
+}
+
+function toLocalDate(input: `${number}-${number}-${number}`): Date {
+  const [year, month, day] = input.split('-').map(Number);
+  return new Date(year, month - 1, day);
+}
+
+function toIsoDate(date: Date): `${number}-${number}-${number}` {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}` as `${number}-${number}-${number}`;
+}
+
+function addMonthsClamped(input: `${number}-${number}-${number}`, monthsToAdd: number): `${number}-${number}-${number}` {
+  const date = toLocalDate(input);
+  const targetMonthIndex = date.getMonth() + monthsToAdd;
+  const lastDayOfTargetMonth = new Date(date.getFullYear(), targetMonthIndex + 1, 0).getDate();
+  return toIsoDate(new Date(date.getFullYear(), targetMonthIndex, Math.min(date.getDate(), lastDayOfTargetMonth)));
+}
+
+function splitAmount(amount: number, parts: number): number[] {
+  const totalInCents = Math.round(amount * 100);
+  const base = Math.floor(totalInCents / parts);
+  const remainder = totalInCents % parts;
+
+  return Array.from({ length: parts }, (_, index) => (base + (index < remainder ? 1 : 0)) / 100);
+}
+
 export function createTransaction(
   input: NewTransactionInput,
   card: CardConfig,
@@ -63,4 +96,41 @@ export function editTransaction(
 
 export function removeTransaction(transactions: Transaction[], transactionId: string): Transaction[] {
   return transactions.filter((entry) => entry.id !== transactionId);
+}
+
+export function createInstallmentTransactions(
+  input: NewTransactionInput,
+  installmentTotal: number,
+  card: CardConfig,
+  options: CreateInstallmentTransactionsOptions
+): Transaction[] {
+  if (!Number.isInteger(installmentTotal) || installmentTotal < 2) {
+    throw new Error('Quantidade de parcelas inválida.');
+  }
+
+  if (input.kind !== 'expense') {
+    throw new Error('Parcelamento disponível apenas para gastos.');
+  }
+
+  const amounts = splitAmount(input.amount, installmentTotal);
+
+  return amounts.map((amount, index) =>
+    createTransaction(
+      {
+        ...input,
+        amount,
+        date: addMonthsClamped(input.date, index),
+        installment: {
+          current: index + 1,
+          total: installmentTotal,
+          groupId: options.groupId,
+        },
+      },
+      card,
+      {
+        id: `${options.idPrefix}-${index + 1}`,
+        now: options.now,
+      }
+    )
+  );
 }

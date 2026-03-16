@@ -1,4 +1,5 @@
 import { useFocusEffect } from '@react-navigation/native';
+import { useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -21,6 +22,7 @@ import { devInfo, devWarn } from '@/utils/logger';
 type HomeSnapshot = Awaited<ReturnType<typeof getHomeDashboardSnapshot>>;
 
 export default function InicioScreen() {
+  const router = useRouter();
   const { colors } = useAppTheme();
   const { strings, formatCurrency, formatIsoDate, resolveSignedAmount } = useI18n();
   const styles = createStyles(colors);
@@ -58,6 +60,33 @@ export default function InicioScreen() {
 
   const monthTone = !snapshot ? 'default' : snapshot.monthBalance >= 0 ? 'income' : 'expense';
 
+  const goToLaunch = useCallback(
+    (type: 'receita' | 'gasto' | 'fixo') => {
+      router.push({ pathname: '/(tabs)/lancar', params: { type } });
+    },
+    [router]
+  );
+
+  const goToPlanning = useCallback(
+    (section: 'budget' | 'card') => {
+      router.push({ pathname: '/(tabs)/planejamento', params: { section } });
+    },
+    [router]
+  );
+
+  const goToCardPurchase = useCallback(() => {
+    router.push('/compra');
+  }, [router]);
+
+  const formatMovementMeta = useCallback(
+    (item: NonNullable<HomeSnapshot>['recentMovements'][number]) => {
+      return [formatIsoDate(item.date), item.installment ? `${item.installment.current}/${item.installment.total}` : null]
+        .filter(Boolean)
+        .join(' • ');
+    },
+    [formatIsoDate]
+  );
+
   return (
     <AppScreen>
       <AppHeader
@@ -83,44 +112,66 @@ export default function InicioScreen() {
 
       {snapshot ? (
         <>
-          <SummaryCard
-            label={strings.home.monthBalanceLabel(snapshot.monthLabel)}
-            value={formatCurrency(snapshot.monthBalance)}
-            tone={monthTone}
-            iconName="dollarsign.circle.fill"
-          />
+          <Pressable
+            style={({ pressed }) => [styles.cardPressable, pressed && styles.cardPressed]}
+            onPress={() => router.push('/(tabs)/insights')}>
+            <SummaryCard
+              label={strings.home.monthBalanceLabel(snapshot.monthLabel)}
+              value={formatCurrency(snapshot.monthBalance)}
+              tone={monthTone}
+              iconName="dollarsign.circle.fill"
+            />
+          </Pressable>
 
           <View style={styles.row}>
-            <MetricCard
-              label={strings.home.income}
-              value={formatCurrency(snapshot.monthIncome)}
-              iconName="plus.circle.fill"
-              tone="income"
-            />
-            <MetricCard
-              label={strings.home.expense}
-              value={formatCurrency(snapshot.monthExpense)}
-              iconName="minus.circle.fill"
-              tone="expense"
-            />
+            <Pressable
+              style={({ pressed }) => [styles.metricPressable, pressed && styles.cardPressed]}
+              onPress={() => goToLaunch('receita')}>
+              <MetricCard
+                label={strings.home.income}
+                value={formatCurrency(snapshot.monthIncome)}
+                iconName="plus.circle.fill"
+                tone="income"
+              />
+            </Pressable>
+            <Pressable
+              style={({ pressed }) => [styles.metricPressable, pressed && styles.cardPressed]}
+              onPress={() => goToLaunch('gasto')}>
+              <MetricCard
+                label={strings.home.expense}
+                value={formatCurrency(snapshot.monthExpense)}
+                iconName="minus.circle.fill"
+                tone="expense"
+              />
+            </Pressable>
           </View>
 
           <View style={styles.row}>
-            <MetricCard
-              label={strings.home.fixedMonth}
-              value={formatCurrency(snapshot.monthFixedExpense)}
-              iconName="pin.fill"
-              tone="warning"
-            />
-            <MetricCard
-              label={strings.home.currentInvoice}
-              value={formatCurrency(snapshot.currentCardInvoice)}
-              iconName="creditcard.fill"
-              tone="info"
-            />
+            <Pressable
+              style={({ pressed }) => [styles.metricPressable, pressed && styles.cardPressed]}
+              onPress={() => goToLaunch('fixo')}>
+              <MetricCard
+                label={strings.home.fixedMonth}
+                value={formatCurrency(snapshot.monthFixedExpense)}
+                iconName="pin.fill"
+                tone="warning"
+              />
+            </Pressable>
+            <Pressable
+              style={({ pressed }) => [styles.metricPressable, pressed && styles.cardPressed]}
+              onPress={goToCardPurchase}>
+              <MetricCard
+                label={strings.home.currentInvoice}
+                value={formatCurrency(snapshot.currentCardInvoice)}
+                iconName="creditcard.fill"
+                tone="info"
+              />
+            </Pressable>
           </View>
 
-          <View style={styles.sectionCard}>
+          <Pressable
+            style={({ pressed }) => [styles.sectionCard, pressed && styles.cardPressed]}
+            onPress={() => goToPlanning('card')}>
             <SectionHeader
               title={strings.home.cardCycleTitle}
               subtitle={strings.home.cardCycleSubtitle}
@@ -140,27 +191,33 @@ export default function InicioScreen() {
                 </Text>
               </View>
             </View>
-          </View>
+          </Pressable>
 
-          <ProgressCard
-            title={strings.home.budgetTitle}
-            subtitle={
-              snapshot.budgetTarget > 0
-                ? strings.home.budgetProgress(
-                    formatCurrency(snapshot.monthExpense),
-                    formatCurrency(snapshot.budgetTarget)
-                  )
-                : strings.home.budgetNoTarget
-            }
-            progress={snapshot.budgetProgress}
-            iconName="target"
-          />
+          <Pressable
+            style={({ pressed }) => [styles.cardPressable, pressed && styles.cardPressed]}
+            onPress={() => goToPlanning('budget')}>
+            <ProgressCard
+              title={strings.home.budgetTitle}
+              subtitle={
+                snapshot.budgetTarget > 0
+                  ? strings.home.budgetProgress(
+                      formatCurrency(snapshot.monthExpense),
+                      formatCurrency(snapshot.budgetTarget)
+                    )
+                  : strings.home.budgetNoTarget
+              }
+              progress={snapshot.budgetProgress}
+              iconName="target"
+            />
+          </Pressable>
 
           <View style={styles.sectionCard}>
             <SectionHeader
               title={strings.home.recentTitle}
               subtitle={strings.home.recentSubtitle}
               iconName="info.circle.fill"
+              actionLabel={strings.tabs.launch}
+              onActionPress={() => goToLaunch('gasto')}
             />
 
             {snapshot.recentMovements.length === 0 ? (
@@ -171,13 +228,21 @@ export default function InicioScreen() {
             ) : (
               <View style={styles.list}>
                 {snapshot.recentMovements.map((item) => (
-                  <TransactionListItem
+                  <Pressable
                     key={item.id}
-                    title={item.title}
-                    meta={formatIsoDate(item.date)}
-                    amount={resolveSignedAmount(item.kind, item.amount)}
-                    kind={item.kind}
-                  />
+                    style={({ pressed }) => pressed && styles.listItemPressed}
+                    onPress={() =>
+                      item.source === 'card'
+                        ? goToCardPurchase()
+                        : goToLaunch(item.kind === 'income' ? 'receita' : 'gasto')
+                    }>
+                    <TransactionListItem
+                      title={item.title}
+                      meta={formatMovementMeta(item)}
+                      amount={resolveSignedAmount(item.kind, item.amount)}
+                      kind={item.kind}
+                    />
+                  </Pressable>
                 ))}
               </View>
             )}
@@ -200,6 +265,12 @@ function createStyles(colors: ReturnType<typeof useAppTheme>['colors']) {
       flexDirection: 'row',
       gap: Spacing.sm,
     },
+    metricPressable: {
+      flex: 1,
+    },
+    cardPressable: {
+      borderRadius: Radius.lg,
+    },
     sectionCard: {
       backgroundColor: colors.surface,
       borderWidth: 1,
@@ -207,6 +278,9 @@ function createStyles(colors: ReturnType<typeof useAppTheme>['colors']) {
       borderRadius: Radius.md,
       padding: Spacing.md,
       gap: Spacing.sm,
+    },
+    cardPressed: {
+      opacity: 0.88,
     },
     cycleRow: {
       flexDirection: 'row',
@@ -232,6 +306,9 @@ function createStyles(colors: ReturnType<typeof useAppTheme>['colors']) {
     },
     list: {
       gap: Spacing.sm,
+    },
+    listItemPressed: {
+      opacity: 0.88,
     },
     cardLoading: {
       borderWidth: 1,

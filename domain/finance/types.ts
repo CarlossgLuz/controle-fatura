@@ -33,6 +33,12 @@ export interface InvoiceCycle {
   due: IsoDateString;
 }
 
+export interface TransactionInstallment {
+  current: number;
+  total: number;
+  groupId: string;
+}
+
 export interface Transaction {
   id: string;
   cardId: CardId;
@@ -43,6 +49,7 @@ export interface Transaction {
   categoryId: Category['id'];
   description: string;
   notes?: string;
+  installment?: TransactionInstallment;
   source: TransactionSource;
   recurringEntryId?: string;
   createdAt: string;

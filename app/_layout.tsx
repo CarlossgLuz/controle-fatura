@@ -186,11 +186,6 @@ export default function RootLayout() {
       }
 
       const inOnboarding = segments[0] === 'onboarding';
-      if (!persistedOnboarding && !inOnboarding) {
-        router.replace('/onboarding');
-        return;
-      }
-
       if (persistedOnboarding && inOnboarding) {
         router.replace('/(tabs)/inicio');
       }

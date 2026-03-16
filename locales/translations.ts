@@ -86,6 +86,9 @@ export interface AppStrings {
     dayOfMonth: string;
     date: string;
     category: string;
+    installments: string;
+    installmentsPlaceholder: string;
+    installmentsHint: string;
     valuePlaceholder: string;
     descriptionPlaceholder: string;
     dayPlaceholder: string;
@@ -97,8 +100,10 @@ export interface AppStrings {
     validationAmount: string;
     validationCategory: string;
     validationDay: string;
+    validationInstallments: string;
     saveSuccessFixed: string;
     saveSuccessEntry: string;
+    saveSuccessInstallments: (count: number) => string;
     saveError: string;
   };
   insights: {
@@ -112,20 +117,39 @@ export interface AppStrings {
     noDataTitle: string;
     noDataDescription: string;
     staleData: string;
+    sectionQuickPulseTitle: string;
+    sectionQuickPulseSubtitle: string;
     sectionIncomeVsExpenseTitle: string;
     sectionIncomeVsExpenseSubtitle: string;
     sectionCategoryTitle: string;
     sectionCategorySubtitle: string;
     sectionFixedVariableTitle: string;
     sectionFixedVariableSubtitle: string;
+    sectionPaceTitle: string;
+    sectionPaceSubtitle: string;
+    sectionTopCategoryTitle: string;
+    sectionTopCategorySubtitle: string;
+    sectionHistoryTitle: string;
+    sectionHistorySubtitle: string;
     sectionPaymentTitle: string;
     sectionPaymentSubtitle: string;
+    monthBalanceTitle: string;
+    cardShareTitle: string;
+    fixedIncomeShareTitle: string;
+    dailyAverageTitle: string;
+    projectedExpenseTitle: string;
+    historyIncomeLabel: string;
+    historyExpenseLabel: string;
+    historyBalanceLabel: string;
     incomeLabel: string;
     expenseLabel: string;
     fixedLabel: string;
     variableLabel: string;
     noExpenses: string;
     noMovements: string;
+    noIncomeBase: string;
+    noIncomeBaseShort: string;
+    topCategoryEmpty: string;
     budgetTitle: string;
     budgetNoTarget: string;
     budgetProgress: (spent: string, target: string) => string;
@@ -242,6 +266,9 @@ export const translations: Record<AppLanguage, AppStrings> = {
       dayOfMonth: 'Dia do mês',
       date: 'Data',
       category: 'Categoria',
+      installments: 'Parcelas',
+      installmentsPlaceholder: '1',
+      installmentsHint: 'Para gasto parcelado, informe de 2 a 36. Receita e fixo continuam sem parcelas.',
       valuePlaceholder: '0,00',
       descriptionPlaceholder: 'Ex: Mercado, salário, aluguel',
       dayPlaceholder: 'Ex: 10',
@@ -253,8 +280,10 @@ export const translations: Record<AppLanguage, AppStrings> = {
       validationAmount: 'Informe um valor válido.',
       validationCategory: 'Selecione uma categoria válida.',
       validationDay: 'Dia do mês inválido para lançamento fixo.',
+      validationInstallments: 'Informe de 1 a 36 parcelas para o gasto.',
       saveSuccessFixed: 'Fixo salvo no Planejamento.',
       saveSuccessEntry: 'Lançamento salvo.',
+      saveSuccessInstallments: (count: number) => `${count} parcelas salvas.`,
       saveError: 'Não foi possível salvar agora.',
     },
     insights: {
@@ -268,20 +297,39 @@ export const translations: Record<AppLanguage, AppStrings> = {
       noDataTitle: 'Sem dados suficientes',
       noDataDescription: 'Registre receitas e gastos na aba Lançar para liberar estes insights.',
       staleData: 'Dados podem estar desatualizados.',
+      sectionQuickPulseTitle: 'Pulso do mês',
+      sectionQuickPulseSubtitle: 'Leituras rápidas para decisão',
       sectionIncomeVsExpenseTitle: 'Receitas vs gastos',
       sectionIncomeVsExpenseSubtitle: 'Equilíbrio mensal',
       sectionCategoryTitle: 'Gastos por categoria',
       sectionCategorySubtitle: 'Categorias com maior peso',
       sectionFixedVariableTitle: 'Fixos vs variáveis',
       sectionFixedVariableSubtitle: 'Composição dos gastos',
+      sectionPaceTitle: 'Ritmo de gasto',
+      sectionPaceSubtitle: 'Média diária e projeção de fechamento',
+      sectionTopCategoryTitle: 'Maior pressão do mês',
+      sectionTopCategorySubtitle: 'Categoria que mais puxou o orçamento',
+      sectionHistoryTitle: 'Histórico do ano',
+      sectionHistorySubtitle: 'Entradas, gastos e saldo por mês',
       sectionPaymentTitle: 'Forma de pagamento',
       sectionPaymentSubtitle: 'Onde você mais concentra gastos',
+      monthBalanceTitle: 'Saldo do mês',
+      cardShareTitle: 'Peso da fatura',
+      fixedIncomeShareTitle: 'Fixos / receita',
+      dailyAverageTitle: 'Média por dia',
+      projectedExpenseTitle: 'Projeção do mês',
+      historyIncomeLabel: 'Entradas',
+      historyExpenseLabel: 'Gastos',
+      historyBalanceLabel: 'Saldo',
       incomeLabel: 'Receitas',
       expenseLabel: 'Gastos',
       fixedLabel: 'Fixos',
       variableLabel: 'Variáveis',
       noExpenses: 'Sem gastos no mês.',
       noMovements: 'Sem movimentações no mês.',
+      noIncomeBase: 'Sem receita registrada para calcular comprometimento fixo.',
+      noIncomeBaseShort: 'Sem base',
+      topCategoryEmpty: 'Sem categoria dominante no mês.',
       budgetTitle: 'Progresso da meta',
       budgetNoTarget: 'Meta mensal não definida no Planejamento.',
       budgetProgress: (spent: string, target: string) => `${spent} de ${target}`,
@@ -391,6 +439,9 @@ export const translations: Record<AppLanguage, AppStrings> = {
       dayOfMonth: 'Day of month',
       date: 'Date',
       category: 'Category',
+      installments: 'Installments',
+      installmentsPlaceholder: '1',
+      installmentsHint: 'For split expenses, enter 2 to 36. Income and fixed entries stay single.',
       valuePlaceholder: '0.00',
       descriptionPlaceholder: 'Ex: Groceries, salary, rent',
       dayPlaceholder: 'Ex: 10',
@@ -402,8 +453,10 @@ export const translations: Record<AppLanguage, AppStrings> = {
       validationAmount: 'Enter a valid amount.',
       validationCategory: 'Select a valid category.',
       validationDay: 'Invalid day of month for fixed entry.',
+      validationInstallments: 'Enter 1 to 36 installments for the expense.',
       saveSuccessFixed: 'Fixed expense saved in Planning.',
       saveSuccessEntry: 'Entry saved.',
+      saveSuccessInstallments: (count: number) => `${count} installments saved.`,
       saveError: 'Could not save right now.',
     },
     insights: {
@@ -417,20 +470,39 @@ export const translations: Record<AppLanguage, AppStrings> = {
       noDataTitle: 'Not enough data',
       noDataDescription: 'Add income and expenses in Add to unlock insights.',
       staleData: 'Data may be outdated.',
+      sectionQuickPulseTitle: 'Month pulse',
+      sectionQuickPulseSubtitle: 'Fast readings for decisions',
       sectionIncomeVsExpenseTitle: 'Income vs expenses',
       sectionIncomeVsExpenseSubtitle: 'Monthly balance',
       sectionCategoryTitle: 'Expenses by category',
       sectionCategorySubtitle: 'Highest-impact categories',
       sectionFixedVariableTitle: 'Fixed vs variable',
       sectionFixedVariableSubtitle: 'Expense composition',
+      sectionPaceTitle: 'Spending pace',
+      sectionPaceSubtitle: 'Daily average and month-end projection',
+      sectionTopCategoryTitle: 'Main pressure point',
+      sectionTopCategorySubtitle: 'Category with the biggest budget pull',
+      sectionHistoryTitle: 'Year history',
+      sectionHistorySubtitle: 'Income, expenses, and balance by month',
       sectionPaymentTitle: 'Payment method',
       sectionPaymentSubtitle: 'Where spending is concentrated',
+      monthBalanceTitle: 'Month balance',
+      cardShareTitle: 'Invoice weight',
+      fixedIncomeShareTitle: 'Fixed / income',
+      dailyAverageTitle: 'Daily average',
+      projectedExpenseTitle: 'Month projection',
+      historyIncomeLabel: 'Income',
+      historyExpenseLabel: 'Expenses',
+      historyBalanceLabel: 'Balance',
       incomeLabel: 'Income',
       expenseLabel: 'Expenses',
       fixedLabel: 'Fixed',
       variableLabel: 'Variable',
       noExpenses: 'No expenses this month.',
       noMovements: 'No movements this month.',
+      noIncomeBase: 'No income recorded to calculate fixed commitment.',
+      noIncomeBaseShort: 'No base',
+      topCategoryEmpty: 'No dominant category this month.',
       budgetTitle: 'Goal progress',
       budgetNoTarget: 'Monthly goal not set in Planning.',
       budgetProgress: (spent: string, target: string) => `${spent} of ${target}`,
@@ -545,6 +617,9 @@ export const translations: Record<AppLanguage, AppStrings> = {
       dayOfMonth: 'Día del mes',
       date: 'Fecha',
       category: 'Categoría',
+      installments: 'Cuotas',
+      installmentsPlaceholder: '1',
+      installmentsHint: 'Para gastos en cuotas, ingresa de 2 a 36. Ingresos y fijos siguen siendo únicos.',
       valuePlaceholder: '0,00',
       descriptionPlaceholder: 'Ej: Supermercado, salario, alquiler',
       dayPlaceholder: 'Ej: 10',
@@ -556,8 +631,10 @@ export const translations: Record<AppLanguage, AppStrings> = {
       validationAmount: 'Ingresa un valor válido.',
       validationCategory: 'Selecciona una categoría válida.',
       validationDay: 'Día del mes inválido para un registro fijo.',
+      validationInstallments: 'Ingresa de 1 a 36 cuotas para el gasto.',
       saveSuccessFixed: 'Fijo guardado en Planificación.',
       saveSuccessEntry: 'Registro guardado.',
+      saveSuccessInstallments: (count: number) => `${count} cuotas guardadas.`,
       saveError: 'No se pudo guardar ahora.',
     },
     insights: {
@@ -571,20 +648,39 @@ export const translations: Record<AppLanguage, AppStrings> = {
       noDataTitle: 'Sin datos suficientes',
       noDataDescription: 'Registra ingresos y gastos en Registrar para liberar estos insights.',
       staleData: 'Los datos pueden estar desactualizados.',
+      sectionQuickPulseTitle: 'Pulso del mes',
+      sectionQuickPulseSubtitle: 'Lecturas rápidas para decidir',
       sectionIncomeVsExpenseTitle: 'Ingresos vs gastos',
       sectionIncomeVsExpenseSubtitle: 'Equilibrio mensual',
       sectionCategoryTitle: 'Gastos por categoría',
       sectionCategorySubtitle: 'Categorías con mayor impacto',
       sectionFixedVariableTitle: 'Fijos vs variables',
       sectionFixedVariableSubtitle: 'Composición de gastos',
+      sectionPaceTitle: 'Ritmo de gasto',
+      sectionPaceSubtitle: 'Promedio diario y proyección de cierre',
+      sectionTopCategoryTitle: 'Mayor presión del mes',
+      sectionTopCategorySubtitle: 'Categoría que más empujó el presupuesto',
+      sectionHistoryTitle: 'Histórico del año',
+      sectionHistorySubtitle: 'Ingresos, gastos y saldo por mes',
       sectionPaymentTitle: 'Método de pago',
       sectionPaymentSubtitle: 'Dónde concentras más gastos',
+      monthBalanceTitle: 'Saldo del mes',
+      cardShareTitle: 'Peso de la factura',
+      fixedIncomeShareTitle: 'Fijos / ingresos',
+      dailyAverageTitle: 'Promedio por día',
+      projectedExpenseTitle: 'Proyección del mes',
+      historyIncomeLabel: 'Ingresos',
+      historyExpenseLabel: 'Gastos',
+      historyBalanceLabel: 'Saldo',
       incomeLabel: 'Ingresos',
       expenseLabel: 'Gastos',
       fixedLabel: 'Fijos',
       variableLabel: 'Variables',
       noExpenses: 'Sin gastos en el mes.',
       noMovements: 'Sin movimientos en el mes.',
+      noIncomeBase: 'Sin ingresos registrados para calcular el compromiso fijo.',
+      noIncomeBaseShort: 'Sin base',
+      topCategoryEmpty: 'Sin categoría dominante en el mes.',
       budgetTitle: 'Progreso de la meta',
       budgetNoTarget: 'Meta mensual no definida en Planificación.',
       budgetProgress: (spent: string, target: string) => `${spent} de ${target}`,

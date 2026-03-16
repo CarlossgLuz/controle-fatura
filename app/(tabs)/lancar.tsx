@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useLocalSearchParams } from 'expo-router';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import {
@@ -12,6 +13,7 @@ import {
 import { Radius, Spacing } from '@/constants/theme';
 import {
   addRecurringEntry,
+  addInstallmentTransaction,
   addTransaction,
   createCustomCategory,
   listCategories,
@@ -31,6 +33,7 @@ interface LaunchForm {
   date: `${number}-${number}-${number}`;
   dayOfMonth: string;
   categoryId: string;
+  installmentTotal: string;
 }
 
 function toIsoToday(date = new Date()): `${number}-${number}-${number}` {
@@ -58,20 +61,30 @@ function usageFromType(type: LaunchType): 'income' | 'expense' | 'fixed' {
   return 'expense';
 }
 
+function defaultLaunchForm(type: LaunchType = 'gasto'): LaunchForm {
+  return {
+    type,
+    amount: '',
+    description: '',
+    date: toIsoToday(),
+    dayOfMonth: String(new Date().getDate()),
+    categoryId: type === 'receita' ? 'income-salary' : 'expense-other',
+    installmentTotal: '1',
+  };
+}
+
+function normalizeTypeParam(value: unknown): LaunchType | null {
+  return value === 'receita' || value === 'gasto' || value === 'fixo' ? value : null;
+}
+
 export default function LancarScreen() {
+  const params = useLocalSearchParams<{ type?: string }>();
   const { colors, mode } = useAppTheme();
   const { strings } = useI18n();
   const styles = createStyles(colors, mode === 'dark');
 
   const [categories, setCategories] = useState<Category[]>([]);
-  const [form, setForm] = useState<LaunchForm>({
-    type: 'gasto',
-    amount: '',
-    description: '',
-    date: toIsoToday(),
-    dayOfMonth: String(new Date().getDate()),
-    categoryId: 'expense-other',
-  });
+  const [form, setForm] = useState<LaunchForm>(() => defaultLaunchForm(normalizeTypeParam(params.type) ?? 'gasto'));
   const [saving, setSaving] = useState(false);
   const [loadingCategories, setLoadingCategories] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -92,6 +105,20 @@ export default function LancarScreen() {
   useEffect(() => {
     loadCategories();
   }, [loadCategories]);
+
+  useEffect(() => {
+    const nextType = normalizeTypeParam(params.type);
+    if (!nextType || nextType === form.type) return;
+
+    setForm((prev) => ({
+      ...prev,
+      ...defaultLaunchForm(nextType),
+      amount: prev.amount,
+      description: prev.description,
+      date: prev.date,
+      dayOfMonth: prev.dayOfMonth,
+    }));
+  }, [form.type, params.type]);
 
   const categoryOptions = useMemo(() => {
     return listCategoriesByUsage(categories, usageFromType(form.type));
@@ -132,6 +159,13 @@ export default function LancarScreen() {
       }
     }
 
+    if (form.type === 'gasto') {
+      const installments = Number(form.installmentTotal || '1');
+      if (!Number.isInteger(installments) || installments < 1 || installments > 36) {
+        return strings.launch.validationInstallments;
+      }
+    }
+
     return null;
   };
 
@@ -161,7 +195,7 @@ export default function LancarScreen() {
           endMonth: undefined,
         });
       } else {
-        await addTransaction({
+        const payload = {
           cardId: DEFAULT_CARD_CONFIG.id,
           kind: form.type === 'receita' ? 'income' : 'expense',
           amount,
@@ -170,16 +204,32 @@ export default function LancarScreen() {
           description: form.description.trim(),
           notes: undefined,
           recurringEntryId: undefined,
-        });
+        } as const;
+
+        const installments = form.type === 'gasto' ? Number(form.installmentTotal || '1') : 1;
+
+        if (form.type === 'gasto' && installments > 1) {
+          await addInstallmentTransaction(payload, installments);
+        } else {
+          await addTransaction(payload);
+        }
       }
 
-      setSuccess(form.type === 'fixo' ? strings.launch.saveSuccessFixed : strings.launch.saveSuccessEntry);
+      const installments = form.type === 'gasto' ? Number(form.installmentTotal || '1') : 1;
+      setSuccess(
+        form.type === 'fixo'
+          ? strings.launch.saveSuccessFixed
+          : installments > 1
+            ? strings.launch.saveSuccessInstallments(installments)
+            : strings.launch.saveSuccessEntry
+      );
       setForm((prev) => ({
         ...prev,
         amount: '',
         description: '',
         date: toIsoToday(),
         dayOfMonth: String(new Date().getDate()),
+        installmentTotal: '1',
       }));
     } catch {
       setError(strings.launch.saveError);
@@ -273,6 +323,21 @@ export default function LancarScreen() {
         ) : (
           <DatePickerField label={strings.launch.date} value={form.date} onChange={(value) => onField('date', value)} />
         )}
+
+        {form.type === 'gasto' ? (
+          <>
+            <Text style={styles.label}>{strings.launch.installments}</Text>
+            <TextInput
+              value={form.installmentTotal}
+              onChangeText={(value) => onField('installmentTotal', value)}
+              placeholder={strings.launch.installmentsPlaceholder}
+              placeholderTextColor={colors.textMuted}
+              keyboardType="number-pad"
+              style={styles.input}
+            />
+            <Text style={styles.helperText}>{strings.launch.installmentsHint}</Text>
+          </>
+        ) : null}
 
         <Text style={styles.label}>{strings.launch.category}</Text>
 

@@ -1,8 +1,8 @@
 import { useFocusEffect } from '@react-navigation/native';
-import { useCallback, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { AppHeader, AppScreen, EmptyState, ProgressCard, SectionHeader } from '@/components/app';
+import { AppHeader, AppScreen, EmptyState, MetricCard, ProgressCard, SectionHeader } from '@/components/app';
 import { Radius, Spacing } from '@/constants/theme';
 import { getInsightsSnapshot } from '@/data/local/insights-dashboard';
 import { useI18n } from '@/hooks/use-i18n';
@@ -13,12 +13,13 @@ type InsightsSnapshot = Awaited<ReturnType<typeof getInsightsSnapshot>>;
 
 export default function InsightsScreen() {
   const { colors } = useAppTheme();
-  const { strings, formatCurrency, formatPercent } = useI18n();
+  const { strings, formatCurrency, formatPercent, formatMonthLabel } = useI18n();
   const styles = createStyles(colors);
 
   const [snapshot, setSnapshot] = useState<InsightsSnapshot | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedHistoryMonthKey, setSelectedHistoryMonthKey] = useState<string | null>(null);
 
   const loadInsights = useCallback(async () => {
     devInfo('[insights] loadInsights:start');
@@ -47,6 +48,15 @@ export default function InsightsScreen() {
     }, [loadInsights])
   );
 
+  useEffect(() => {
+    if (!snapshot?.monthHistory.length) return;
+    if (selectedHistoryMonthKey && snapshot.monthHistory.some((entry) => entry.monthKey === selectedHistoryMonthKey)) {
+      return;
+    }
+
+    setSelectedHistoryMonthKey(snapshot.monthKey);
+  }, [selectedHistoryMonthKey, snapshot]);
+
   const BarItem = ({
     label,
     value,
@@ -66,10 +76,63 @@ export default function InsightsScreen() {
         </Text>
       </View>
       <View style={[styles.barTrack, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
-        <View style={[styles.barFill, { width: `${Math.max(share * 100, 4)}%`, backgroundColor: color }]} />
+        <View
+          style={[
+            styles.barFill,
+            {
+              width: share > 0 ? `${Math.max(share * 100, 4)}%` : '0%',
+              backgroundColor: color,
+            },
+          ]}
+        />
       </View>
     </View>
   );
+
+  const historyScaleMax = useMemo(() => {
+    if (!snapshot?.monthHistory.length) return 0;
+    return snapshot.monthHistory.reduce(
+      (max, entry) => Math.max(max, entry.income, entry.expense, Math.abs(entry.balance)),
+      0
+    );
+  }, [snapshot]);
+
+  const selectedHistoryMonth = useMemo(() => {
+    if (!snapshot?.monthHistory.length) return null;
+    return (
+      snapshot.monthHistory.find((entry) => entry.monthKey === selectedHistoryMonthKey) ??
+      snapshot.monthHistory[snapshot.monthHistory.length - 1]
+    );
+  }, [selectedHistoryMonthKey, snapshot]);
+
+  const yearSummary = useMemo(() => {
+    if (!snapshot?.monthHistory.length) {
+      return {
+        income: 0,
+        expense: 0,
+        balance: 0,
+      };
+    }
+
+    return snapshot.monthHistory.reduce(
+      (acc, entry) => ({
+        income: acc.income + entry.income,
+        expense: acc.expense + entry.expense,
+        balance: acc.balance + entry.balance,
+      }),
+      { income: 0, expense: 0, balance: 0 }
+    );
+  }, [snapshot]);
+
+  const historyMonthLabel = (monthKey: string) => {
+    const [year, month] = monthKey.split('-').map(Number);
+    return formatMonthLabel(new Date(year, month - 1, 1));
+  };
+
+  const widthFromValue = (value: number) => {
+    if (historyScaleMax <= 0 || value <= 0) return '0%';
+    return `${Math.max(8, Math.round((Math.abs(value) / historyScaleMax) * 100))}%`;
+  };
 
   return (
     <AppScreen>
@@ -96,6 +159,40 @@ export default function InsightsScreen() {
 
       {snapshot && snapshot.hasAnyData ? (
         <>
+          <View style={styles.card}>
+            <SectionHeader
+              title={strings.insights.sectionQuickPulseTitle}
+              subtitle={strings.insights.sectionQuickPulseSubtitle}
+            />
+            <View style={styles.row}>
+              <MetricCard
+                label={strings.insights.monthBalanceTitle}
+                value={formatCurrency(snapshot.quickPulse.balance)}
+                tone={snapshot.quickPulse.balance >= 0 ? 'income' : 'expense'}
+                iconName="dollarsign.circle.fill"
+              />
+              <MetricCard
+                label={strings.insights.cardShareTitle}
+                value={formatPercent(snapshot.quickPulse.cardShare)}
+                tone="info"
+                iconName="creditcard.fill"
+              />
+            </View>
+            <MetricCard
+              label={strings.insights.fixedIncomeShareTitle}
+              value={
+                snapshot.quickPulse.fixedIncomeShare === null
+                  ? strings.insights.noIncomeBaseShort
+                  : formatPercent(snapshot.quickPulse.fixedIncomeShare)
+              }
+              caption={
+                snapshot.quickPulse.fixedIncomeShare === null ? strings.insights.noIncomeBase : undefined
+              }
+              tone="warning"
+              iconName="pin.fill"
+            />
+          </View>
+
           <View style={styles.card}>
             <SectionHeader
               title={strings.insights.sectionIncomeVsExpenseTitle}
@@ -171,6 +268,29 @@ export default function InsightsScreen() {
             />
           </View>
 
+          <View style={styles.card}>
+            <SectionHeader title={strings.insights.sectionPaceTitle} subtitle={strings.insights.sectionPaceSubtitle} />
+            <View style={styles.row}>
+              <MetricCard
+                label={strings.insights.dailyAverageTitle}
+                value={formatCurrency(snapshot.quickPulse.averageDailyExpense)}
+                iconName="calendar.circle.fill"
+                tone="default"
+              />
+              <MetricCard
+                label={strings.insights.projectedExpenseTitle}
+                value={formatCurrency(snapshot.quickPulse.projectedExpense)}
+                iconName="chart.bar.fill"
+                tone={
+                  snapshot.budgetProgress.target > 0 &&
+                  snapshot.quickPulse.projectedExpense > snapshot.budgetProgress.target
+                    ? 'expense'
+                    : 'default'
+                }
+              />
+            </View>
+          </View>
+
           <ProgressCard
             title={strings.insights.budgetTitle}
             subtitle={
@@ -183,6 +303,225 @@ export default function InsightsScreen() {
             }
             progress={snapshot.budgetProgress.progress}
           />
+
+          <View style={styles.card}>
+            <SectionHeader
+              title={strings.insights.sectionTopCategoryTitle}
+              subtitle={strings.insights.sectionTopCategorySubtitle}
+            />
+            {snapshot.topExpenseCategory ? (
+              <BarItem
+                label={snapshot.topExpenseCategory.label}
+                value={snapshot.topExpenseCategory.amount}
+                share={snapshot.topExpenseCategory.share}
+                color={colors.expense}
+              />
+            ) : (
+              <Text style={[styles.placeholder, { color: colors.textSecondary }]}>
+                {strings.insights.topCategoryEmpty}
+              </Text>
+            )}
+          </View>
+
+          <View style={styles.card}>
+            <SectionHeader
+              title={strings.insights.sectionHistoryTitle}
+              subtitle={strings.insights.sectionHistorySubtitle}
+            />
+            <View style={[styles.historyHero, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
+              <View style={styles.historyHeroHeader}>
+                <Text style={[styles.historyHeroTitle, { color: colors.textPrimary }]}>
+                  {selectedHistoryMonth ? historyMonthLabel(selectedHistoryMonth.monthKey) : ''}
+                </Text>
+                <Text
+                  style={[
+                    styles.historyHeroBalance,
+                    {
+                      color: !selectedHistoryMonth
+                        ? colors.textPrimary
+                        : selectedHistoryMonth.balance >= 0
+                          ? colors.income
+                          : colors.expense,
+                    },
+                  ]}>
+                  {formatCurrency(selectedHistoryMonth?.balance ?? 0)}
+                </Text>
+              </View>
+              <Text style={[styles.historyHeroSubtitle, { color: colors.textSecondary }]}>
+                {strings.insights.historyBalanceLabel}
+              </Text>
+
+              <View style={styles.historyCompareGroup}>
+                <View style={styles.historyCompareRow}>
+                  <View style={styles.historyCompareLabelRow}>
+                    <Text style={[styles.historyLabel, { color: colors.textMuted }]}>{strings.insights.historyIncomeLabel}</Text>
+                    <Text style={[styles.historyValue, { color: colors.income }]}>
+                      {formatCurrency(selectedHistoryMonth?.income ?? 0)}
+                    </Text>
+                  </View>
+                  <View style={[styles.historyTrack, { backgroundColor: colors.background, borderColor: colors.border }]}>
+                    <View
+                      style={[
+                        styles.historyFill,
+                        {
+                          width: widthFromValue(selectedHistoryMonth?.income ?? 0),
+                          backgroundColor: colors.income,
+                        },
+                      ]}
+                    />
+                  </View>
+                </View>
+
+                <View style={styles.historyCompareRow}>
+                  <View style={styles.historyCompareLabelRow}>
+                    <Text style={[styles.historyLabel, { color: colors.textMuted }]}>{strings.insights.historyExpenseLabel}</Text>
+                    <Text style={[styles.historyValue, { color: colors.expense }]}>
+                      {formatCurrency(selectedHistoryMonth?.expense ?? 0)}
+                    </Text>
+                  </View>
+                  <View style={[styles.historyTrack, { backgroundColor: colors.background, borderColor: colors.border }]}>
+                    <View
+                      style={[
+                        styles.historyFill,
+                        {
+                          width: widthFromValue(selectedHistoryMonth?.expense ?? 0),
+                          backgroundColor: colors.expense,
+                        },
+                      ]}
+                    />
+                  </View>
+                </View>
+              </View>
+
+              <View style={styles.historySummaryRow}>
+                <View style={[styles.historySummaryChip, { backgroundColor: `${colors.income}14` }]}>
+                  <Text style={[styles.historySummaryChipLabel, { color: colors.textMuted }]}>
+                    {strings.insights.historyIncomeLabel}
+                  </Text>
+                  <Text style={[styles.historySummaryChipValue, { color: colors.income }]}>
+                    {formatCurrency(yearSummary.income)}
+                  </Text>
+                </View>
+                <View style={[styles.historySummaryChip, { backgroundColor: `${colors.expense}12` }]}>
+                  <Text style={[styles.historySummaryChipLabel, { color: colors.textMuted }]}>
+                    {strings.insights.historyExpenseLabel}
+                  </Text>
+                  <Text style={[styles.historySummaryChipValue, { color: colors.expense }]}>
+                    {formatCurrency(yearSummary.expense)}
+                  </Text>
+                </View>
+                <View
+                  style={[
+                    styles.historySummaryChip,
+                    {
+                      backgroundColor: `${(yearSummary.balance >= 0 ? colors.income : colors.expense)}12`,
+                    },
+                  ]}>
+                  <Text style={[styles.historySummaryChipLabel, { color: colors.textMuted }]}>
+                    {strings.insights.historyBalanceLabel}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.historySummaryChipValue,
+                      { color: yearSummary.balance >= 0 ? colors.income : colors.expense },
+                    ]}>
+                    {formatCurrency(yearSummary.balance)}
+                  </Text>
+                </View>
+              </View>
+            </View>
+
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.historyMonthStrip}>
+              {snapshot.monthHistory.map((item) => {
+                const active = selectedHistoryMonth?.monthKey === item.monthKey;
+                return (
+                  <Pressable
+                    key={item.monthKey}
+                    style={[
+                      styles.historyMonthChip,
+                      {
+                        borderColor: active ? colors.primary : colors.border,
+                        backgroundColor: active ? `${colors.primary}12` : colors.surfaceElevated,
+                      },
+                    ]}
+                    onPress={() => setSelectedHistoryMonthKey(item.monthKey)}>
+                    <Text
+                      style={[
+                        styles.historyMonthChipText,
+                        { color: active ? colors.primary : colors.textSecondary },
+                      ]}>
+                      {historyMonthLabel(item.monthKey)}
+                    </Text>
+                    <Text
+                      style={[
+                        styles.historyMonthChipBalance,
+                        { color: item.balance >= 0 ? colors.income : colors.expense },
+                      ]}>
+                      {formatCurrency(item.balance)}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+
+            <View style={styles.historyList}>
+              {snapshot.monthHistory.map((item) => {
+                const active = selectedHistoryMonth?.monthKey === item.monthKey;
+                return (
+                  <Pressable
+                    key={item.monthKey}
+                    style={[
+                      styles.historyRow,
+                      {
+                        borderColor: active ? colors.primary : colors.border,
+                        backgroundColor: active ? `${colors.primary}0D` : colors.surfaceElevated,
+                      },
+                    ]}
+                    onPress={() => setSelectedHistoryMonthKey(item.monthKey)}>
+                    <View style={styles.historyRowTop}>
+                      <Text style={[styles.historyMonth, { color: colors.textPrimary }]}>
+                        {historyMonthLabel(item.monthKey)}
+                      </Text>
+                      <Text
+                        style={[
+                          styles.historyBalanceCompact,
+                          { color: item.balance >= 0 ? colors.income : colors.expense },
+                        ]}>
+                        {formatCurrency(item.balance)}
+                      </Text>
+                    </View>
+                    <View style={styles.historyLineGroup}>
+                      <View style={[styles.historyTrack, { backgroundColor: colors.background, borderColor: colors.border }]}>
+                        <View
+                          style={[
+                            styles.historyFill,
+                            {
+                              width: widthFromValue(item.income),
+                              backgroundColor: colors.income,
+                            },
+                          ]}
+                        />
+                      </View>
+                      <View style={[styles.historyTrack, { backgroundColor: colors.background, borderColor: colors.border }]}>
+                        <View
+                          style={[
+                            styles.historyFill,
+                            {
+                              width: widthFromValue(item.expense),
+                              backgroundColor: colors.expense,
+                            },
+                          ]}
+                        />
+                      </View>
+                    </View>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
 
           <View style={styles.card}>
             <SectionHeader title={strings.insights.sectionPaymentTitle} subtitle={strings.insights.sectionPaymentSubtitle} />
@@ -239,6 +578,140 @@ function createStyles(colors: ReturnType<typeof useAppTheme>['colors']) {
     },
     barBlock: {
       gap: Spacing.xs,
+    },
+    row: {
+      flexDirection: 'row',
+      gap: Spacing.sm,
+    },
+    historyList: {
+      gap: Spacing.sm,
+    },
+    historyHero: {
+      borderWidth: 1,
+      borderRadius: Radius.lg,
+      padding: Spacing.md,
+      gap: Spacing.md,
+    },
+    historyHeroHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'flex-start',
+      gap: Spacing.sm,
+    },
+    historyHeroTitle: {
+      fontSize: 17,
+      fontWeight: '700',
+      textTransform: 'capitalize',
+      flex: 1,
+    },
+    historyHeroBalance: {
+      fontSize: 22,
+      fontWeight: '800',
+    },
+    historyHeroSubtitle: {
+      fontSize: 12,
+      marginTop: -Spacing.sm,
+    },
+    historyCompareGroup: {
+      gap: Spacing.sm,
+    },
+    historyCompareRow: {
+      gap: Spacing.xs,
+    },
+    historyCompareLabelRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      gap: Spacing.sm,
+    },
+    historySummaryRow: {
+      flexDirection: 'row',
+      gap: Spacing.sm,
+    },
+    historySummaryChip: {
+      flex: 1,
+      borderRadius: Radius.md,
+      padding: Spacing.sm,
+      gap: 2,
+    },
+    historySummaryChipLabel: {
+      fontSize: 11,
+      fontWeight: '600',
+    },
+    historySummaryChipValue: {
+      fontSize: 13,
+      fontWeight: '700',
+    },
+    historyMonthStrip: {
+      gap: Spacing.sm,
+      paddingRight: Spacing.xs,
+    },
+    historyMonthChip: {
+      minWidth: 112,
+      borderWidth: 1,
+      borderRadius: Radius.md,
+      paddingVertical: Spacing.sm,
+      paddingHorizontal: Spacing.md,
+      gap: 2,
+    },
+    historyMonthChipText: {
+      fontSize: 12,
+      fontWeight: '700',
+      textTransform: 'capitalize',
+    },
+    historyMonthChipBalance: {
+      fontSize: 12,
+      fontWeight: '700',
+    },
+    historyRow: {
+      borderWidth: 1,
+      borderRadius: Radius.md,
+      padding: Spacing.sm,
+      gap: Spacing.xs,
+    },
+    historyRowTop: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: Spacing.sm,
+    },
+    historyMonth: {
+      fontSize: 13,
+      fontWeight: '700',
+      textTransform: 'capitalize',
+    },
+    historyBalanceCompact: {
+      fontSize: 12,
+      fontWeight: '700',
+    },
+    historyLineGroup: {
+      gap: Spacing.xs,
+    },
+    historyTrack: {
+      height: 8,
+      borderWidth: 1,
+      borderRadius: Radius.pill,
+      overflow: 'hidden',
+    },
+    historyFill: {
+      height: '100%',
+      borderRadius: Radius.pill,
+    },
+    historyValues: {
+      flexDirection: 'row',
+      gap: Spacing.sm,
+    },
+    historyValueBlock: {
+      flex: 1,
+      gap: 2,
+    },
+    historyLabel: {
+      fontSize: 11,
+      fontWeight: '600',
+    },
+    historyValue: {
+      fontSize: 12,
+      fontWeight: '700',
     },
     barTop: {
       flexDirection: 'row',
