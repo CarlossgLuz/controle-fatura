@@ -9,6 +9,7 @@ import type { Compra } from '@/domain/types';
 
 export interface MonthlyMovement {
   id: string;
+  entityId: string;
   title: string;
   amount: number;
   date: string;
@@ -17,6 +18,7 @@ export interface MonthlyMovement {
   installment?: {
     current: number;
     total: number;
+    groupId?: string;
   };
 }
 
@@ -176,6 +178,7 @@ export function aggregateMonthFinanceData(input: {
 
   const movementTransactions: MonthlyMovement[] = monthTransactions.map((entry, index) => ({
     id: entry.id ? `txn:${entry.id}` : `txn:legacy:${entry.date}:${index}`,
+    entityId: entry.id,
     title: entry.description,
     amount: entry.amount,
     date: entry.date,
@@ -185,12 +188,14 @@ export function aggregateMonthFinanceData(input: {
       ? {
           current: entry.installment.current,
           total: entry.installment.total,
+          groupId: entry.installment.groupId,
         }
       : undefined,
   }));
 
   const movementPurchases: MonthlyMovement[] = monthPurchases.map((entry, index) => ({
     id: entry.id ? `buy:${entry.id}` : `buy:legacy:${entry.dataCompra}:${index}`,
+    entityId: entry.id,
     title: entry.titulo,
     amount: entry.valor,
     date: entry.dataCompra,

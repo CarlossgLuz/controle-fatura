@@ -12,7 +12,6 @@ import {
 } from '@/components/app';
 import { Radius, Spacing } from '@/constants/theme';
 import {
-  addRecurringEntry,
   addInstallmentTransaction,
   addTransaction,
   createCustomCategory,
@@ -24,15 +23,15 @@ import { DEFAULT_CARD_CONFIG } from '@/domain/finance/types';
 import { useAppTheme } from '@/hooks/use-app-theme';
 import { useI18n } from '@/hooks/use-i18n';
 
-type LaunchType = 'receita' | 'gasto' | 'fixo';
+type LaunchType = 'receita' | 'gasto';
 
 interface LaunchForm {
   type: LaunchType;
   amount: string;
   description: string;
   date: `${number}-${number}-${number}`;
-  dayOfMonth: string;
   categoryId: string;
+  installmentCurrent: string;
   installmentTotal: string;
 }
 
@@ -43,21 +42,14 @@ function toIsoToday(date = new Date()): `${number}-${number}-${number}` {
   return `${year}-${month}-${day}` as `${number}-${number}-${number}`;
 }
 
-function toMonthKey(date = new Date()): `${number}-${number}` {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  return `${year}-${month}` as `${number}-${number}`;
-}
-
 function parseAmount(raw: string): number {
   const normalized = raw.replace(/\./g, '').replace(',', '.').trim();
   const parsed = Number(normalized);
   return Number.isFinite(parsed) ? parsed : NaN;
 }
 
-function usageFromType(type: LaunchType): 'income' | 'expense' | 'fixed' {
+function usageFromType(type: LaunchType): 'income' | 'expense' {
   if (type === 'receita') return 'income';
-  if (type === 'fixo') return 'fixed';
   return 'expense';
 }
 
@@ -67,14 +59,14 @@ function defaultLaunchForm(type: LaunchType = 'gasto'): LaunchForm {
     amount: '',
     description: '',
     date: toIsoToday(),
-    dayOfMonth: String(new Date().getDate()),
     categoryId: type === 'receita' ? 'income-salary' : 'expense-other',
+    installmentCurrent: '1',
     installmentTotal: '1',
   };
 }
 
 function normalizeTypeParam(value: unknown): LaunchType | null {
-  return value === 'receita' || value === 'gasto' || value === 'fixo' ? value : null;
+  return value === 'receita' || value === 'gasto' ? value : null;
 }
 
 export default function LancarScreen() {
@@ -108,17 +100,13 @@ export default function LancarScreen() {
 
   useEffect(() => {
     const nextType = normalizeTypeParam(params.type);
-    if (!nextType || nextType === form.type) return;
+    if (!nextType) return;
 
     setForm((prev) => ({
-      ...prev,
-      ...defaultLaunchForm(nextType),
-      amount: prev.amount,
-      description: prev.description,
-      date: prev.date,
-      dayOfMonth: prev.dayOfMonth,
+      ...(prev.type === nextType ? prev : defaultLaunchForm(nextType)),
+      type: nextType,
     }));
-  }, [form.type, params.type]);
+  }, [params.type]);
 
   const categoryOptions = useMemo(() => {
     return listCategoriesByUsage(categories, usageFromType(form.type));
@@ -152,17 +140,19 @@ export default function LancarScreen() {
       return strings.launch.validationCategory;
     }
 
-    if (form.type === 'fixo') {
-      const day = Number(form.dayOfMonth);
-      if (!Number.isInteger(day) || day < 1 || day > 31) {
-        return strings.launch.validationDay;
-      }
-    }
-
     if (form.type === 'gasto') {
       const installments = Number(form.installmentTotal || '1');
       if (!Number.isInteger(installments) || installments < 1 || installments > 36) {
         return strings.launch.validationInstallments;
+      }
+
+      const currentInstallment = Number(form.installmentCurrent || '1');
+      if (
+        !Number.isInteger(currentInstallment) ||
+        currentInstallment < 1 ||
+        currentInstallment > installments
+      ) {
+        return strings.launch.validationInstallmentCurrent;
       }
     }
 
@@ -182,53 +172,38 @@ export default function LancarScreen() {
     setSuccess(null);
 
     try {
-      if (form.type === 'fixo') {
-        await addRecurringEntry({
-          cardId: DEFAULT_CARD_CONFIG.id,
-          kind: 'expense',
-          amount,
-          dayOfMonth: Number(form.dayOfMonth),
-          categoryId: form.categoryId,
-          description: form.description.trim(),
-          startMonth: toMonthKey(),
-          notes: undefined,
-          endMonth: undefined,
-        });
-      } else {
-        const payload = {
-          cardId: DEFAULT_CARD_CONFIG.id,
-          kind: form.type === 'receita' ? 'income' : 'expense',
-          amount,
-          date: form.date,
-          categoryId: form.categoryId,
-          description: form.description.trim(),
-          notes: undefined,
-          recurringEntryId: undefined,
-        } as const;
-
-        const installments = form.type === 'gasto' ? Number(form.installmentTotal || '1') : 1;
-
-        if (form.type === 'gasto' && installments > 1) {
-          await addInstallmentTransaction(payload, installments);
-        } else {
-          await addTransaction(payload);
-        }
-      }
+      const payload = {
+        cardId: DEFAULT_CARD_CONFIG.id,
+        kind: form.type === 'receita' ? 'income' : 'expense',
+        amount,
+        date: form.date,
+        categoryId: form.categoryId,
+        description: form.description.trim(),
+        notes: undefined,
+        recurringEntryId: undefined,
+      } as const;
 
       const installments = form.type === 'gasto' ? Number(form.installmentTotal || '1') : 1;
+      const currentInstallment = form.type === 'gasto' ? Number(form.installmentCurrent || '1') : 1;
+
+      if (form.type === 'gasto' && installments > 1) {
+        await addInstallmentTransaction(payload, installments, currentInstallment);
+      } else {
+        await addTransaction(payload);
+      }
+
+      const savedInstallments = form.type === 'gasto' ? installments - currentInstallment + 1 : 1;
       setSuccess(
-        form.type === 'fixo'
-          ? strings.launch.saveSuccessFixed
-          : installments > 1
-            ? strings.launch.saveSuccessInstallments(installments)
-            : strings.launch.saveSuccessEntry
+        installments > 1
+          ? strings.launch.saveSuccessInstallments(savedInstallments)
+          : strings.launch.saveSuccessEntry
       );
       setForm((prev) => ({
         ...prev,
         amount: '',
         description: '',
         date: toIsoToday(),
-        dayOfMonth: String(new Date().getDate()),
+        installmentCurrent: '1',
         installmentTotal: '1',
       }));
     } catch {
@@ -256,27 +231,23 @@ export default function LancarScreen() {
       />
 
       <View style={styles.typeRow}>
-        {(['receita', 'gasto', 'fixo'] as LaunchType[]).map((item) => {
+        {(['receita', 'gasto'] as LaunchType[]).map((item) => {
           const active = form.type === item;
           const toneStyle =
             item === 'receita'
               ? styles.typeChipIncomeActive
-              : item === 'gasto'
-                ? styles.typeChipExpenseActive
-                : styles.typeChipFixedActive;
+              : styles.typeChipExpenseActive;
           const toneTextStyle =
             item === 'receita'
               ? styles.typeChipIncomeTextActive
-              : item === 'gasto'
-                ? styles.typeChipExpenseTextActive
-                : styles.typeChipFixedTextActive;
+              : styles.typeChipExpenseTextActive;
           return (
             <Pressable
               key={item}
               style={[styles.typeChip, active && toneStyle]}
               onPress={() => onField('type', item)}>
               <Text style={[styles.typeChipText, active && toneTextStyle]}>
-                {item === 'receita' ? strings.launch.income : item === 'gasto' ? strings.launch.expense : strings.launch.fixed}
+                {item === 'receita' ? strings.launch.income : strings.launch.expense}
               </Text>
             </Pressable>
           );
@@ -285,8 +256,8 @@ export default function LancarScreen() {
 
       <View style={styles.card}>
         <SectionHeader
-          title={form.type === 'fixo' ? strings.launch.newFixedTitle : strings.launch.newEntryTitle}
-          subtitle={form.type === 'fixo' ? strings.launch.newFixedSubtitle : strings.launch.newEntrySubtitle}
+          title={strings.launch.newEntryTitle}
+          subtitle={strings.launch.newEntrySubtitle}
         />
 
         <Text style={styles.label}>{strings.launch.amount}</Text>
@@ -308,33 +279,34 @@ export default function LancarScreen() {
           style={styles.input}
         />
 
-        {form.type === 'fixo' ? (
-          <>
-            <Text style={styles.label}>{strings.launch.dayOfMonth}</Text>
-            <TextInput
-              value={form.dayOfMonth}
-              onChangeText={(value) => onField('dayOfMonth', value)}
-              placeholder={strings.launch.dayPlaceholder}
-              placeholderTextColor={colors.textMuted}
-              keyboardType="number-pad"
-              style={styles.input}
-            />
-          </>
-        ) : (
-          <DatePickerField label={strings.launch.date} value={form.date} onChange={(value) => onField('date', value)} />
-        )}
+        <DatePickerField label={strings.launch.date} value={form.date} onChange={(value) => onField('date', value)} />
 
         {form.type === 'gasto' ? (
           <>
-            <Text style={styles.label}>{strings.launch.installments}</Text>
-            <TextInput
-              value={form.installmentTotal}
-              onChangeText={(value) => onField('installmentTotal', value)}
-              placeholder={strings.launch.installmentsPlaceholder}
-              placeholderTextColor={colors.textMuted}
-              keyboardType="number-pad"
-              style={styles.input}
-            />
+            <View style={styles.installmentRow}>
+              <View style={styles.installmentField}>
+                <Text style={styles.label}>{strings.launch.installments}</Text>
+                <TextInput
+                  value={form.installmentTotal}
+                  onChangeText={(value) => onField('installmentTotal', value)}
+                  placeholder={strings.launch.installmentsPlaceholder}
+                  placeholderTextColor={colors.textMuted}
+                  keyboardType="number-pad"
+                  style={styles.input}
+                />
+              </View>
+              <View style={styles.installmentField}>
+                <Text style={styles.label}>{strings.launch.installmentCurrent}</Text>
+                <TextInput
+                  value={form.installmentCurrent}
+                  onChangeText={(value) => onField('installmentCurrent', value)}
+                  placeholder={strings.launch.installmentCurrentPlaceholder}
+                  placeholderTextColor={colors.textMuted}
+                  keyboardType="number-pad"
+                  style={styles.input}
+                />
+              </View>
+            </View>
             <Text style={styles.helperText}>{strings.launch.installmentsHint}</Text>
           </>
         ) : null}
@@ -353,7 +325,7 @@ export default function LancarScreen() {
             <CategoryQuickAdd
               triggerMode="chip"
               kind={form.type === 'receita' ? 'income' : 'expense'}
-              usage={form.type === 'receita' ? 'all' : form.type === 'fixo' ? 'fixed' : 'variable'}
+              usage={form.type === 'receita' ? 'all' : 'variable'}
               onSave={async (name, kind, usage) => {
                 const created = await createCustomCategory({ name, kind, usage });
                 await loadCategories();
@@ -413,10 +385,6 @@ function createStyles(colors: ReturnType<typeof useAppTheme>['colors'], isDark: 
       borderColor: `${colors.expense}66`,
       backgroundColor: `${colors.expense}12`,
     },
-    typeChipFixedActive: {
-      borderColor: `${colors.warning}66`,
-      backgroundColor: `${colors.warning}14`,
-    },
     typeChipText: {
       color: colors.textSecondary,
       fontSize: 13,
@@ -427,9 +395,6 @@ function createStyles(colors: ReturnType<typeof useAppTheme>['colors'], isDark: 
     },
     typeChipExpenseTextActive: {
       color: colors.expense,
-    },
-    typeChipFixedTextActive: {
-      color: colors.warning,
     },
     card: {
       backgroundColor: colors.surface,
@@ -457,6 +422,14 @@ function createStyles(colors: ReturnType<typeof useAppTheme>['colors'], isDark: 
       fontSize: 15,
       paddingHorizontal: Spacing.md,
       paddingVertical: 12,
+    },
+    installmentRow: {
+      flexDirection: 'row',
+      gap: Spacing.sm,
+    },
+    installmentField: {
+      flex: 1,
+      gap: Spacing.xs,
     },
     chips: {
       flexDirection: 'row',

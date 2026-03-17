@@ -103,7 +103,7 @@ function clampProgress(value: number): number {
 }
 
 export default function PlanejamentoScreen() {
-  const params = useLocalSearchParams<{ section?: string }>();
+  const params = useLocalSearchParams<{ section?: string; segment?: string }>();
   const { colors, mode } = useAppTheme();
   const styles = createStyles(colors, mode === 'dark');
 
@@ -174,7 +174,7 @@ export default function PlanejamentoScreen() {
     !budgetTarget || budgetTarget <= 0
       ? 'Sem meta'
       : budgetProgressRaw < 0.8
-        ? 'No limite'
+        ? 'Dentro da meta'
         : budgetProgressRaw <= 1
           ? 'Atenção'
           : 'Acima da meta';
@@ -220,7 +220,16 @@ export default function PlanejamentoScreen() {
   }, [allCategories, entries]);
 
   const visibleEntries = groupedEntries[activeSegment];
-  const highlightedSection = params.section === 'card' || params.section === 'budget' ? params.section : null;
+  const highlightedSection =
+    params.section === 'card' || params.section === 'budget' || params.section === 'recurring'
+      ? params.section
+      : null;
+
+  useEffect(() => {
+    if (params.segment === 'income' || params.segment === 'fixed' || params.segment === 'expense') {
+      setActiveSegment(params.segment);
+    }
+  }, [params.segment]);
 
   const onSaveBudget = async () => {
     const amount = parseAmount(budgetInput);
@@ -397,9 +406,9 @@ export default function PlanejamentoScreen() {
   return (
     <AppScreen keyboardAware>
       <AppHeader
-        eyebrow="Controle do mês"
+        eyebrow="Seu mês"
         title="Planejamento"
-        subtitle="Meta, cartão e recorrentes com estrutura simples."
+        subtitle="Meta, cartão e recorrentes do mês."
       />
 
       {loading ? (
@@ -411,14 +420,18 @@ export default function PlanejamentoScreen() {
       {!loading ? (
         <>
           <View style={[styles.goalCard, highlightedSection === 'budget' && styles.targetedCard]}>
-            <SectionHeader title="Meta mensal" subtitle="Card principal do mês" iconName="target" />
-            <Text style={styles.bigValue}>{budgetTarget ? formatCurrency(budgetTarget) : 'Sem meta mensal'}</Text>
+            <SectionHeader title="Meta mensal" subtitle="Seu limite para este mês" iconName="target" />
+            <View style={styles.goalValueCard}>
+              <Text style={[styles.bigValue, !budgetTarget && styles.bigValueMuted]}>
+                {budgetTarget ? formatCurrency(budgetTarget) : 'Defina sua meta mensal'}
+              </Text>
+            </View>
             <View style={styles.goalSummaryRow}>
-              <Text style={styles.goalMeta}>Gasto atual: {formatCurrency(monthExpense)}</Text>
+              <Text style={styles.goalMeta}>Gasto no mês: {formatCurrency(monthExpense)}</Text>
               <Text
                 style={[
                   styles.goalState,
-                  budgetState === 'No limite'
+                  budgetState === 'Dentro da meta'
                     ? styles.goalStateGood
                     : budgetState === 'Atenção'
                       ? styles.goalStateWarning
@@ -433,8 +446,13 @@ export default function PlanejamentoScreen() {
               <View
                 style={[
                   styles.goalFill,
-                  { width: budgetTarget ? `${Math.max(6, Math.round(budgetProgress * 100))}%` : '0%' },
-                  budgetState === 'No limite'
+                  {
+                    width:
+                      budgetTarget && budgetProgress > 0
+                        ? `${Math.max(6, Math.round(budgetProgress * 100))}%`
+                        : '0%',
+                  },
+                  budgetState === 'Dentro da meta'
                     ? styles.goalFillGood
                     : budgetState === 'Atenção'
                       ? styles.goalFillWarning
@@ -508,8 +526,8 @@ export default function PlanejamentoScreen() {
             </View>
           </View>
 
-          <View style={styles.card}>
-            <SectionHeader title="Recorrentes" subtitle="Criação e gestão" iconName="arrow.clockwise.circle.fill" />
+          <View style={[styles.card, highlightedSection === 'recurring' && styles.targetedCard]}>
+            <SectionHeader title="Recorrentes" subtitle="Cadastre e acompanhe" iconName="arrow.clockwise.circle.fill" />
 
             <View style={styles.typeRow}>
               {(['income', 'fixed', 'expense'] as RecurringCreateType[]).map((type) => {
@@ -666,7 +684,7 @@ export default function PlanejamentoScreen() {
           </View>
 
           <View style={styles.card}>
-            <SectionHeader title="Categorias" subtitle="Ocultar, reativar e excluir com segurança" iconName="pin.fill" />
+            <SectionHeader title="Categorias" subtitle="Organize o que aparece no app" iconName="pin.fill" />
             {categoriesForManagement.length === 0 ? (
               <EmptyState title="Sem categorias" description="Crie categorias para personalizar o fluxo." />
             ) : (
@@ -751,8 +769,23 @@ function createStyles(colors: ReturnType<typeof useAppTheme>['colors'], isDarkMo
     },
     bigValue: {
       color: colors.textPrimary,
-      fontSize: 26,
+      fontSize: 32,
+      fontWeight: '800',
+      letterSpacing: -0.4,
+    },
+    bigValueMuted: {
+      color: colors.textSecondary,
+      fontSize: 24,
       fontWeight: '700',
+      letterSpacing: 0,
+    },
+    goalValueCard: {
+      borderRadius: Radius.lg,
+      borderWidth: 1,
+      borderColor: colors.border,
+      backgroundColor: colors.surfaceElevated,
+      paddingHorizontal: Spacing.md,
+      paddingVertical: Spacing.md,
     },
     goalSummaryRow: {
       flexDirection: 'row',

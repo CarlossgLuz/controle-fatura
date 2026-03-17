@@ -203,6 +203,82 @@ function sanitizeStoredRecurring(
   return { value, changed };
 }
 
+function sanitizeStoredBudgetConfig(
+  raw: unknown
+): { value: BudgetConfig | null; changed: boolean } {
+  if (!raw || typeof raw !== 'object') {
+    return { value: null, changed: Boolean(raw) };
+  }
+
+  const entry = raw as Partial<BudgetConfig>;
+  if (
+    entry.id !== 'budget-main' ||
+    !isMonthKey(entry.month) ||
+    typeof entry.targetAmount !== 'number' ||
+    !Number.isFinite(entry.targetAmount) ||
+    entry.targetAmount <= 0
+  ) {
+    return { value: null, changed: true };
+  }
+
+  const nowIso = new Date().toISOString();
+  const value: BudgetConfig = {
+    id: 'budget-main',
+    month: entry.month,
+    targetAmount: entry.targetAmount,
+    updatedAt: isIsoTimestamp(entry.updatedAt) ? entry.updatedAt : nowIso,
+  };
+
+  return {
+    value,
+    changed:
+      !isIsoTimestamp(entry.updatedAt),
+  };
+}
+
+function sanitizeStoredCardConfig(
+  raw: unknown
+): { value: CardConfig; changed: boolean } {
+  if (!raw || typeof raw !== 'object') {
+    return { value: DEFAULT_CARD_CONFIG, changed: Boolean(raw) };
+  }
+
+  const entry = raw as Partial<CardConfig>;
+  const closingDay = entry.closingDay;
+  const dueDay = entry.dueDay;
+  const name = typeof entry.name === 'string' ? entry.name.trim() : '';
+
+  if (
+    entry.id !== DEFAULT_CARD_CONFIG.id ||
+    !name ||
+    typeof closingDay !== 'number' ||
+    !Number.isInteger(closingDay) ||
+    closingDay < 1 ||
+    closingDay > 31 ||
+    typeof dueDay !== 'number' ||
+    !Number.isInteger(dueDay) ||
+    dueDay < 1 ||
+    dueDay > 31 ||
+    entry.currency !== DEFAULT_CARD_CONFIG.currency
+  ) {
+    return { value: DEFAULT_CARD_CONFIG, changed: true };
+  }
+
+  const value: CardConfig = {
+    id: DEFAULT_CARD_CONFIG.id,
+    name,
+    closingDay,
+    dueDay,
+    currency: DEFAULT_CARD_CONFIG.currency,
+  };
+
+  return {
+    value,
+    changed:
+      entry.name !== name,
+  };
+}
+
 export async function listTransactions(): Promise<Transaction[]> {
   const rawData = await readJson<unknown>(TRANSACTIONS_KEY, []);
   const data = Array.isArray(rawData) ? rawData : [];
@@ -234,7 +310,8 @@ export async function addTransaction(input: NewTransactionInput): Promise<Transa
 
 export async function addInstallmentTransaction(
   input: NewTransactionInput,
-  installmentTotal: number
+  installmentTotal: number,
+  installmentCurrent: number = 1
 ): Promise<Transaction[]> {
   const current = await listTransactions();
   const card = await getCardConfig();
@@ -242,6 +319,7 @@ export async function addInstallmentTransaction(
   const created = createInstallmentTransactions(input, installmentTotal, card, {
     idPrefix: generateId('txn'),
     groupId: generateId('installment'),
+    installmentCurrent,
     now,
   });
   await writeJson(TRANSACTIONS_KEY, [...created, ...current]);
@@ -270,6 +348,29 @@ export async function removeTransactionById(transactionId: string): Promise<void
   await writeJson(
     TRANSACTIONS_KEY,
     current.filter((entry) => entry.id !== transactionId)
+  );
+}
+
+export async function removeTransactionsByInstallmentGroup(groupId: string): Promise<void> {
+  const current = await listTransactions();
+  await writeJson(
+    TRANSACTIONS_KEY,
+    current.filter((entry) => entry.installment?.groupId !== groupId)
+  );
+}
+
+export async function removeTransactionsByInstallmentGroupFromCurrent(
+  groupId: string,
+  currentInstallment: number
+): Promise<void> {
+  const current = await listTransactions();
+  await writeJson(
+    TRANSACTIONS_KEY,
+    current.filter(
+      (entry) =>
+        entry.installment?.groupId !== groupId ||
+        (entry.installment.current ?? 0) < currentInstallment
+    )
   );
 }
 
@@ -337,7 +438,18 @@ export async function removeRecurringEntryById(entryId: string): Promise<void> {
 }
 
 export async function getBudgetConfig(): Promise<BudgetConfig | null> {
-  return readJson<BudgetConfig | null>(BUDGET_KEY, null);
+  const raw = await readJson<unknown>(BUDGET_KEY, null);
+  const sanitized = sanitizeStoredBudgetConfig(raw);
+
+  if (sanitized.changed) {
+    if (sanitized.value) {
+      await writeJson(BUDGET_KEY, sanitized.value);
+    } else {
+      await AsyncStorage.removeItem(BUDGET_KEY);
+    }
+  }
+
+  return sanitized.value;
 }
 
 export async function saveBudgetConfig(config: BudgetConfig): Promise<void> {
@@ -360,7 +472,14 @@ export async function clearBudgetConfig(): Promise<void> {
 }
 
 export async function getCardConfig(): Promise<CardConfig> {
-  return readJson<CardConfig>(CARD_CONFIG_KEY, DEFAULT_CARD_CONFIG);
+  const raw = await readJson<unknown>(CARD_CONFIG_KEY, DEFAULT_CARD_CONFIG);
+  const sanitized = sanitizeStoredCardConfig(raw);
+
+  if (sanitized.changed) {
+    await writeJson(CARD_CONFIG_KEY, sanitized.value);
+  }
+
+  return sanitized.value;
 }
 
 export async function saveCardConfig(config: CardConfig): Promise<void> {

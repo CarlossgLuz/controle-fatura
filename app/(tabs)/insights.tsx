@@ -130,8 +130,8 @@ export default function InsightsScreen() {
   };
 
   const widthFromValue = (value: number) => {
-    if (historyScaleMax <= 0 || value <= 0) return '0%';
-    return `${Math.max(8, Math.round((Math.abs(value) / historyScaleMax) * 100))}%`;
+    if (historyScaleMax <= 0 || value <= 0) return '0%' as const;
+    return `${Math.max(8, Math.round((Math.abs(value) / historyScaleMax) * 100))}%` as const;
   };
 
   return (

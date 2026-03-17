@@ -60,6 +60,7 @@ export function createTransaction(
   const cycle = calculateInvoiceCycleByDate(input.date, card);
 
   return {
+    id: options.id,
     ...input,
     cycleId: cycle.id,
     source: input.source ?? 'manual',
@@ -102,17 +103,26 @@ export function createInstallmentTransactions(
   input: NewTransactionInput,
   installmentTotal: number,
   card: CardConfig,
-  options: CreateInstallmentTransactionsOptions
+  options: CreateInstallmentTransactionsOptions & { installmentCurrent?: number }
 ): Transaction[] {
   if (!Number.isInteger(installmentTotal) || installmentTotal < 2) {
     throw new Error('Quantidade de parcelas inválida.');
+  }
+
+  const installmentCurrent = options.installmentCurrent ?? 1;
+  if (
+    !Number.isInteger(installmentCurrent) ||
+    installmentCurrent < 1 ||
+    installmentCurrent > installmentTotal
+  ) {
+    throw new Error('Parcela atual inválida.');
   }
 
   if (input.kind !== 'expense') {
     throw new Error('Parcelamento disponível apenas para gastos.');
   }
 
-  const amounts = splitAmount(input.amount, installmentTotal);
+  const amounts = splitAmount(input.amount, installmentTotal).slice(installmentCurrent - 1);
 
   return amounts.map((amount, index) =>
     createTransaction(
@@ -121,7 +131,7 @@ export function createInstallmentTransactions(
         amount,
         date: addMonthsClamped(input.date, index),
         installment: {
-          current: index + 1,
+          current: installmentCurrent + index,
           total: installmentTotal,
           groupId: options.groupId,
         },

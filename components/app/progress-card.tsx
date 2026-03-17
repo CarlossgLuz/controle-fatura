@@ -13,7 +13,7 @@ interface ProgressCardProps {
 
 export function ProgressCard({ title, subtitle, progress, iconName }: ProgressCardProps) {
   const { colors } = useAppTheme();
-  const width = `${Math.round(Math.max(0, Math.min(progress, 1)) * 100)}%`;
+  const width = `${Math.round(Math.max(0, Math.min(progress, 1)) * 100)}%` as const;
 
   return (
     <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>

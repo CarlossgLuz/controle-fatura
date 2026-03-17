@@ -1,7 +1,7 @@
 import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { getHomeDashboardSnapshot } from '@/data/local/home-dashboard';
 import {
@@ -14,7 +14,13 @@ import {
   SummaryCard,
   TransactionListItem,
 } from '@/components/app';
+import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Radius, Spacing } from '@/constants/theme';
+import {
+  removeTransactionById,
+  removeTransactionsByInstallmentGroupFromCurrent,
+} from '@/data/local/finance-repository';
+import { excluirCompra } from '@/data/sqlite';
 import { useAppTheme } from '@/hooks/use-app-theme';
 import { useI18n } from '@/hooks/use-i18n';
 import { devInfo, devWarn } from '@/utils/logger';
@@ -61,20 +67,25 @@ export default function InicioScreen() {
   const monthTone = !snapshot ? 'default' : snapshot.monthBalance >= 0 ? 'income' : 'expense';
 
   const goToLaunch = useCallback(
-    (type: 'receita' | 'gasto' | 'fixo') => {
+    (type: 'receita' | 'gasto') => {
       router.push({ pathname: '/(tabs)/lancar', params: { type } });
     },
     [router]
   );
 
   const goToPlanning = useCallback(
-    (section: 'budget' | 'card') => {
-      router.push({ pathname: '/(tabs)/planejamento', params: { section } });
+    (section: 'budget' | 'card' | 'recurring', segment?: 'income' | 'fixed' | 'expense') => {
+      router.push({ pathname: '/(tabs)/planejamento', params: { section, segment } });
     },
     [router]
   );
 
-  const goToCardPurchase = useCallback(() => {
+  const goToCardPurchase = useCallback((purchaseId?: string) => {
+    if (purchaseId) {
+      router.push({ pathname: '/compra', params: { id: purchaseId } });
+      return;
+    }
+
     router.push('/compra');
   }, [router]);
 
@@ -85,6 +96,53 @@ export default function InicioScreen() {
         .join(' • ');
     },
     [formatIsoDate]
+  );
+
+  const confirmRemoveMovement = useCallback(
+    (item: NonNullable<HomeSnapshot>['recentMovements'][number]) => {
+      if (item.kind !== 'expense' || !item.entityId) return;
+
+      const title =
+        item.source === 'card' ? strings.home.removePurchaseTitle : strings.home.removeExpenseTitle;
+      const message =
+        item.source === 'card'
+          ? strings.home.removePurchaseDescription
+          : item.installment
+            ? strings.home.removeInstallmentDescription(item.installment.current, item.installment.total)
+            : strings.home.removeExpenseDescription;
+
+      Alert.alert(title, message, [
+        { text: strings.common.cancel, style: 'cancel' },
+        {
+          text: strings.common.remove,
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              if (item.source === 'card') {
+                await excluirCompra(item.entityId);
+              } else if (item.installment?.groupId) {
+                await removeTransactionsByInstallmentGroupFromCurrent(
+                  item.installment.groupId,
+                  item.installment.current
+                );
+              } else {
+                await removeTransactionById(item.entityId);
+              }
+
+              await loadDashboard();
+            } catch {
+              setError(strings.home.removeError);
+            }
+          },
+        },
+      ]);
+    },
+    [
+      loadDashboard,
+      strings.common.cancel,
+      strings.common.remove,
+      strings.home,
+    ]
   );
 
   return (
@@ -149,7 +207,7 @@ export default function InicioScreen() {
           <View style={styles.row}>
             <Pressable
               style={({ pressed }) => [styles.metricPressable, pressed && styles.cardPressed]}
-              onPress={() => goToLaunch('fixo')}>
+              onPress={() => goToPlanning('recurring', 'fixed')}>
               <MetricCard
                 label={strings.home.fixedMonth}
                 value={formatCurrency(snapshot.monthFixedExpense)}
@@ -159,7 +217,7 @@ export default function InicioScreen() {
             </Pressable>
             <Pressable
               style={({ pressed }) => [styles.metricPressable, pressed && styles.cardPressed]}
-              onPress={goToCardPurchase}>
+              onPress={() => goToCardPurchase()}>
               <MetricCard
                 label={strings.home.currentInvoice}
                 value={formatCurrency(snapshot.currentCardInvoice)}
@@ -228,21 +286,37 @@ export default function InicioScreen() {
             ) : (
               <View style={styles.list}>
                 {snapshot.recentMovements.map((item) => (
-                  <Pressable
-                    key={item.id}
-                    style={({ pressed }) => pressed && styles.listItemPressed}
-                    onPress={() =>
-                      item.source === 'card'
-                        ? goToCardPurchase()
-                        : goToLaunch(item.kind === 'income' ? 'receita' : 'gasto')
-                    }>
-                    <TransactionListItem
-                      title={item.title}
-                      meta={formatMovementMeta(item)}
-                      amount={resolveSignedAmount(item.kind, item.amount)}
-                      kind={item.kind}
-                    />
-                  </Pressable>
+                  <View key={item.id} style={styles.listItemRow}>
+                    {item.source === 'card' ? (
+                      <Pressable
+                        style={({ pressed }) => [styles.listItemMain, pressed && styles.listItemPressed]}
+                        onPress={() => goToCardPurchase(item.entityId)}>
+                        <TransactionListItem
+                          title={item.title}
+                          meta={formatMovementMeta(item)}
+                          amount={resolveSignedAmount(item.kind, item.amount)}
+                          kind={item.kind}
+                        />
+                      </Pressable>
+                    ) : (
+                      <View style={styles.listItemMain}>
+                        <TransactionListItem
+                          title={item.title}
+                          meta={formatMovementMeta(item)}
+                          amount={resolveSignedAmount(item.kind, item.amount)}
+                          kind={item.kind}
+                        />
+                      </View>
+                    )}
+
+                    {item.kind === 'expense' && item.entityId && (item.source === 'manual' || item.source === 'card') ? (
+                      <Pressable
+                        style={({ pressed }) => [styles.inlineDeleteButton, pressed && styles.listItemPressed]}
+                        onPress={() => confirmRemoveMovement(item)}>
+                        <IconSymbol name="trash.fill" size={16} color={colors.expense} />
+                      </Pressable>
+                    ) : null}
+                  </View>
                 ))}
               </View>
             )}
@@ -251,9 +325,12 @@ export default function InicioScreen() {
       ) : null}
 
       {error && snapshot ? (
-        <Pressable onPress={loadDashboard} style={styles.retryInline}>
-          <Text style={[styles.retryText, { color: colors.info }]}>{strings.home.refreshData}</Text>
-        </Pressable>
+        <View style={styles.inlineFeedback}>
+          <Text style={[styles.inlineErrorText, { color: colors.expense }]}>{error}</Text>
+          <Pressable onPress={loadDashboard} style={styles.retryInline}>
+            <Text style={[styles.retryText, { color: colors.info }]}>{strings.home.refreshData}</Text>
+          </Pressable>
+        </View>
       ) : null}
     </AppScreen>
   );
@@ -307,8 +384,26 @@ function createStyles(colors: ReturnType<typeof useAppTheme>['colors']) {
     list: {
       gap: Spacing.sm,
     },
+    listItemRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: Spacing.sm,
+    },
+    listItemMain: {
+      flex: 1,
+    },
     listItemPressed: {
       opacity: 0.88,
+    },
+    inlineDeleteButton: {
+      width: 42,
+      height: 42,
+      borderRadius: Radius.md,
+      borderWidth: 1,
+      borderColor: `${colors.expense}33`,
+      backgroundColor: colors.surfaceElevated,
+      alignItems: 'center',
+      justifyContent: 'center',
     },
     cardLoading: {
       borderWidth: 1,
@@ -319,6 +414,14 @@ function createStyles(colors: ReturnType<typeof useAppTheme>['colors']) {
     },
     loadingText: {
       fontSize: 14,
+    },
+    inlineFeedback: {
+      gap: Spacing.xs,
+      alignItems: 'center',
+    },
+    inlineErrorText: {
+      fontSize: 12,
+      textAlign: 'center',
     },
     retryInline: {
       alignSelf: 'center',

@@ -4,6 +4,8 @@ export interface AppStrings {
   common: {
     unknownError: string;
     tryAgain: string;
+    cancel: string;
+    remove: string;
     loading: string;
     appName: string;
     localFirstHint: string;
@@ -66,6 +68,13 @@ export interface AppStrings {
     recentSubtitle: string;
     emptyMovementsTitle: string;
     emptyMovementsDescription: string;
+    removeExpenseTitle: string;
+    removeExpenseDescription: string;
+    removeInstallmentDescription: (current: number, total: number) => string;
+    removePurchaseTitle: string;
+    removePurchaseDescription: string;
+    removeSuccess: string;
+    removeError: string;
     refreshData: string;
   };
   launch: {
@@ -77,6 +86,8 @@ export interface AppStrings {
     income: string;
     expense: string;
     fixed: string;
+    recurringShortcutTitle: string;
+    recurringShortcutSubtitle: string;
     newFixedTitle: string;
     newFixedSubtitle: string;
     newEntryTitle: string;
@@ -87,7 +98,9 @@ export interface AppStrings {
     date: string;
     category: string;
     installments: string;
+    installmentCurrent: string;
     installmentsPlaceholder: string;
+    installmentCurrentPlaceholder: string;
     installmentsHint: string;
     valuePlaceholder: string;
     descriptionPlaceholder: string;
@@ -101,6 +114,7 @@ export interface AppStrings {
     validationCategory: string;
     validationDay: string;
     validationInstallments: string;
+    validationInstallmentCurrent: string;
     saveSuccessFixed: string;
     saveSuccessEntry: string;
     saveSuccessInstallments: (count: number) => string;
@@ -171,6 +185,8 @@ export const translations: Record<AppLanguage, AppStrings> = {
     common: {
       unknownError: 'erro desconhecido',
       tryAgain: 'Tentar novamente',
+      cancel: 'Cancelar',
+      remove: 'Remover',
       loading: 'Carregando...',
       appName: 'Clarium',
       localFirstHint: 'Seus dados ficam no seu dispositivo.',
@@ -225,7 +241,7 @@ export const translations: Record<AppLanguage, AppStrings> = {
     home: {
       eyebrow: 'Visão mensal',
       title: 'Início',
-      subtitle: 'Resumo direto do mês, sem ruído visual.',
+      subtitle: 'Veja seu mês de forma rápida.',
       loading: 'Carregando dados...',
       loadFailedTitle: 'Falha ao carregar',
       loadFailedDescription: 'Não conseguimos buscar os dados do mês agora.',
@@ -246,29 +262,42 @@ export const translations: Record<AppLanguage, AppStrings> = {
       recentSubtitle: 'Movimentações recentes do mês',
       emptyMovementsTitle: 'Sem movimentações',
       emptyMovementsDescription: 'Use a aba Lançar para registrar a primeira receita ou gasto.',
+      removeExpenseTitle: 'Remover gasto',
+      removeExpenseDescription: 'Deseja remover este gasto dos últimos lançamentos?',
+      removeInstallmentDescription: (current: number, total: number) =>
+        `Deseja remover o parcelamento a partir da parcela ${current} de ${total}?`,
+      removePurchaseTitle: 'Remover compra',
+      removePurchaseDescription: 'Deseja remover esta compra do cartão?',
+      removeSuccess: 'Movimentação removida.',
+      removeError: 'Não foi possível remover a movimentação.',
       refreshData: 'Atualizar dados',
     },
     launch: {
-      eyebrow: 'Fluxo guiado',
+      eyebrow: 'Novo lançamento',
       title: 'Lançar',
-      subtitle: 'Escolha o tipo e preencha só o necessário.',
+      subtitle: 'Registre uma receita ou gasto.',
       saving: 'Salvando...',
       save: 'Salvar lançamento',
       income: 'Receita',
       expense: 'Gasto',
       fixed: 'Fixo',
+      recurringShortcutTitle: '',
+      recurringShortcutSubtitle: '',
       newFixedTitle: 'Novo fixo',
       newFixedSubtitle: 'Será repetido mensalmente.',
       newEntryTitle: 'Novo lançamento',
-      newEntrySubtitle: 'Entra no mês atual.',
+      newEntrySubtitle: 'Preencha os dados para salvar.',
       amount: 'Valor',
       description: 'Descrição',
       dayOfMonth: 'Dia do mês',
       date: 'Data',
       category: 'Categoria',
       installments: 'Parcelas',
+      installmentCurrent: 'Parcela atual',
       installmentsPlaceholder: '1',
-      installmentsHint: 'Para gasto parcelado, informe de 2 a 36. Receita e fixo continuam sem parcelas.',
+      installmentCurrentPlaceholder: '1',
+      installmentsHint:
+        'Para gasto parcelado, informe o total e a parcela atual. Se já estiver na 5ª, o app salva da 5ª até a última.',
       valuePlaceholder: '0,00',
       descriptionPlaceholder: 'Ex: Mercado, salário, aluguel',
       dayPlaceholder: 'Ex: 10',
@@ -281,6 +310,7 @@ export const translations: Record<AppLanguage, AppStrings> = {
       validationCategory: 'Selecione uma categoria válida.',
       validationDay: 'Dia do mês inválido para lançamento fixo.',
       validationInstallments: 'Informe de 1 a 36 parcelas para o gasto.',
+      validationInstallmentCurrent: 'Informe uma parcela atual válida entre 1 e o total.',
       saveSuccessFixed: 'Fixo salvo no Planejamento.',
       saveSuccessEntry: 'Lançamento salvo.',
       saveSuccessInstallments: (count: number) => `${count} parcelas salvas.`,
@@ -289,7 +319,7 @@ export const translations: Record<AppLanguage, AppStrings> = {
     insights: {
       eyebrow: 'Leitura analítica',
       title: 'Insights',
-      subtitle: 'Comparativos simples para decidir próximos ajustes.',
+      subtitle: 'Acompanhe seus números do mês.',
       loading: 'Carregando insights...',
       loadError: (message: string) => `Não foi possível carregar os insights (${message}).`,
       loadFailedTitle: 'Falha ao carregar',
@@ -349,6 +379,8 @@ export const translations: Record<AppLanguage, AppStrings> = {
     common: {
       unknownError: 'unknown error',
       tryAgain: 'Try again',
+      cancel: 'Cancel',
+      remove: 'Remove',
       loading: 'Loading...',
       appName: 'Clarium',
       localFirstHint: 'Your data stays on your device.',
@@ -419,29 +451,42 @@ export const translations: Record<AppLanguage, AppStrings> = {
       recentSubtitle: 'Latest month movements',
       emptyMovementsTitle: 'No movements yet',
       emptyMovementsDescription: 'Use the Add tab to register your first income or expense.',
+      removeExpenseTitle: 'Remove expense',
+      removeExpenseDescription: 'Do you want to remove this expense from recent entries?',
+      removeInstallmentDescription: (current: number, total: number) =>
+        `Do you want to remove this installment plan starting at installment ${current} of ${total}?`,
+      removePurchaseTitle: 'Remove purchase',
+      removePurchaseDescription: 'Do you want to remove this card purchase?',
+      removeSuccess: 'Movement removed.',
+      removeError: 'Could not remove the movement.',
       refreshData: 'Refresh data',
     },
     launch: {
-      eyebrow: 'Guided flow',
+      eyebrow: 'New entry',
       title: 'Add',
-      subtitle: 'Choose the type and fill only what is needed.',
+      subtitle: 'Add an income or expense.',
       saving: 'Saving...',
       save: 'Save entry',
       income: 'Income',
       expense: 'Expense',
       fixed: 'Fixed',
+      recurringShortcutTitle: '',
+      recurringShortcutSubtitle: '',
       newFixedTitle: 'New fixed expense',
       newFixedSubtitle: 'It will repeat monthly.',
       newEntryTitle: 'New entry',
-      newEntrySubtitle: 'It goes into the current month.',
+      newEntrySubtitle: 'Fill in the details to save it.',
       amount: 'Amount',
       description: 'Description',
       dayOfMonth: 'Day of month',
       date: 'Date',
       category: 'Category',
       installments: 'Installments',
+      installmentCurrent: 'Current installment',
       installmentsPlaceholder: '1',
-      installmentsHint: 'For split expenses, enter 2 to 36. Income and fixed entries stay single.',
+      installmentCurrentPlaceholder: '1',
+      installmentsHint:
+        'For split expenses, enter the total and the current installment. If you are already on the 5th, Clarium saves from the 5th onward.',
       valuePlaceholder: '0.00',
       descriptionPlaceholder: 'Ex: Groceries, salary, rent',
       dayPlaceholder: 'Ex: 10',
@@ -454,6 +499,7 @@ export const translations: Record<AppLanguage, AppStrings> = {
       validationCategory: 'Select a valid category.',
       validationDay: 'Invalid day of month for fixed entry.',
       validationInstallments: 'Enter 1 to 36 installments for the expense.',
+      validationInstallmentCurrent: 'Enter a valid current installment between 1 and the total.',
       saveSuccessFixed: 'Fixed expense saved in Planning.',
       saveSuccessEntry: 'Entry saved.',
       saveSuccessInstallments: (count: number) => `${count} installments saved.`,
@@ -462,7 +508,7 @@ export const translations: Record<AppLanguage, AppStrings> = {
     insights: {
       eyebrow: 'Analytical view',
       title: 'Insights',
-      subtitle: 'Simple comparisons to guide next adjustments.',
+      subtitle: 'Track your numbers for the month.',
       loading: 'Loading insights...',
       loadError: (message: string) => `Could not load insights (${message}).`,
       loadFailedTitle: 'Failed to load',
@@ -522,6 +568,8 @@ export const translations: Record<AppLanguage, AppStrings> = {
     common: {
       unknownError: 'error desconocido',
       tryAgain: 'Intentar de nuevo',
+      cancel: 'Cancelar',
+      remove: 'Eliminar',
       loading: 'Cargando...',
       appName: 'Clarium',
       localFirstHint: 'Tus datos permanecen en tu dispositivo.',
@@ -597,29 +645,42 @@ export const translations: Record<AppLanguage, AppStrings> = {
       recentSubtitle: 'Movimientos recientes del mes',
       emptyMovementsTitle: 'Sin movimientos',
       emptyMovementsDescription: 'Usa la pestaña Registrar para crear tu primer ingreso o gasto.',
+      removeExpenseTitle: 'Eliminar gasto',
+      removeExpenseDescription: '¿Deseas eliminar este gasto de los últimos registros?',
+      removeInstallmentDescription: (current: number, total: number) =>
+        `¿Deseas eliminar este plan en cuotas desde la cuota ${current} de ${total}?`,
+      removePurchaseTitle: 'Eliminar compra',
+      removePurchaseDescription: '¿Deseas eliminar esta compra de la tarjeta?',
+      removeSuccess: 'Movimiento eliminado.',
+      removeError: 'No se pudo eliminar el movimiento.',
       refreshData: 'Actualizar datos',
     },
     launch: {
-      eyebrow: 'Flujo guiado',
+      eyebrow: 'Nuevo registro',
       title: 'Registrar',
-      subtitle: 'Elige el tipo y completa solo lo necesario.',
+      subtitle: 'Registra un ingreso o gasto.',
       saving: 'Guardando...',
       save: 'Guardar registro',
       income: 'Ingreso',
       expense: 'Gasto',
       fixed: 'Fijo',
+      recurringShortcutTitle: '',
+      recurringShortcutSubtitle: '',
       newFixedTitle: 'Nuevo fijo',
       newFixedSubtitle: 'Se repetirá mensualmente.',
       newEntryTitle: 'Nuevo registro',
-      newEntrySubtitle: 'Se agrega al mes actual.',
+      newEntrySubtitle: 'Completa los datos para guardar.',
       amount: 'Valor',
       description: 'Descripción',
       dayOfMonth: 'Día del mes',
       date: 'Fecha',
       category: 'Categoría',
       installments: 'Cuotas',
+      installmentCurrent: 'Cuota actual',
       installmentsPlaceholder: '1',
-      installmentsHint: 'Para gastos en cuotas, ingresa de 2 a 36. Ingresos y fijos siguen siendo únicos.',
+      installmentCurrentPlaceholder: '1',
+      installmentsHint:
+        'Para gastos en cuotas, ingresa el total y la cuota actual. Si ya estás en la 5ª, Clarium guarda desde la 5ª en adelante.',
       valuePlaceholder: '0,00',
       descriptionPlaceholder: 'Ej: Supermercado, salario, alquiler',
       dayPlaceholder: 'Ej: 10',
@@ -632,6 +693,7 @@ export const translations: Record<AppLanguage, AppStrings> = {
       validationCategory: 'Selecciona una categoría válida.',
       validationDay: 'Día del mes inválido para un registro fijo.',
       validationInstallments: 'Ingresa de 1 a 36 cuotas para el gasto.',
+      validationInstallmentCurrent: 'Ingresa una cuota actual válida entre 1 y el total.',
       saveSuccessFixed: 'Fijo guardado en Planificación.',
       saveSuccessEntry: 'Registro guardado.',
       saveSuccessInstallments: (count: number) => `${count} cuotas guardadas.`,
@@ -640,7 +702,7 @@ export const translations: Record<AppLanguage, AppStrings> = {
     insights: {
       eyebrow: 'Lectura analítica',
       title: 'Insights',
-      subtitle: 'Comparaciones simples para decidir próximos ajustes.',
+      subtitle: 'Sigue tus números del mes.',
       loading: 'Cargando insights...',
       loadError: (message: string) => `No se pudieron cargar los insights (${message}).`,
       loadFailedTitle: 'Error al cargar',
