@@ -25,6 +25,7 @@ import {
 } from '@/data/local/finance-repository';
 import { listCategoriesByUsage, type Category, type RecurringEntry } from '@/domain/finance';
 import { useAppTheme } from '@/hooks/use-app-theme';
+import { formatCurrencyInput, normalizeCurrencyInput, parseCurrencyInput, sanitizeDigits } from '@/utils/currency-input';
 
 type RecurringCreateType = 'income' | 'fixed' | 'expense';
 type RecurringSegment = 'income' | 'fixed' | 'expense';
@@ -47,12 +48,6 @@ function toMonthKey(date = new Date()): `${number}-${number}` {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
   return `${year}-${month}` as `${number}-${number}`;
-}
-
-function parseAmount(raw: string): number {
-  const normalized = raw.replace(/\./g, '').replace(',', '.').trim();
-  const parsed = Number(normalized);
-  return Number.isFinite(parsed) ? parsed : NaN;
 }
 
 function formatCurrency(value: number): string {
@@ -138,7 +133,7 @@ export default function PlanejamentoScreen() {
       setAllCategories(allCategoriesData);
       setBudgetTarget(budget?.targetAmount ?? null);
       setMonthExpense(home.monthExpense);
-      setBudgetInput(budget?.targetAmount ? String(budget.targetAmount).replace('.', ',') : '');
+      setBudgetInput(budget?.targetAmount ? formatCurrencyInput(budget.targetAmount) : '');
       setCardForm({
         name: card.name,
         closingDay: String(card.closingDay),
@@ -232,7 +227,7 @@ export default function PlanejamentoScreen() {
   }, [params.segment]);
 
   const onSaveBudget = async () => {
-    const amount = parseAmount(budgetInput);
+    const amount = parseCurrencyInput(budgetInput);
     if (!Number.isFinite(amount) || amount <= 0) {
       setError('Informe uma meta mensal válida.');
       return;
@@ -296,7 +291,7 @@ export default function PlanejamentoScreen() {
       return;
     }
 
-    const amount = parseAmount(recurringForm.amount);
+    const amount = parseCurrencyInput(recurringForm.amount);
     if (!Number.isFinite(amount) || amount <= 0) {
       setError('Informe um valor válido para a recorrência.');
       return;
@@ -466,7 +461,7 @@ export default function PlanejamentoScreen() {
             <Text style={styles.fieldLabel}>Valor da meta</Text>
             <TextInput
               value={budgetInput}
-              onChangeText={setBudgetInput}
+              onChangeText={(value) => setBudgetInput(normalizeCurrencyInput(value))}
               placeholder="Valor da meta"
               placeholderTextColor={colors.textMuted}
               keyboardType="decimal-pad"
@@ -497,7 +492,7 @@ export default function PlanejamentoScreen() {
                 <Text style={styles.fieldLabel}>Dia de fechamento</Text>
                 <TextInput
                   value={cardForm.closingDay}
-                  onChangeText={(value) => setCardForm((prev) => ({ ...prev, closingDay: value }))}
+                  onChangeText={(value) => setCardForm((prev) => ({ ...prev, closingDay: sanitizeDigits(value) }))}
                   placeholder="Fechamento"
                   placeholderTextColor={colors.textMuted}
                   keyboardType="number-pad"
@@ -508,7 +503,7 @@ export default function PlanejamentoScreen() {
                 <Text style={styles.fieldLabel}>Dia de vencimento</Text>
                 <TextInput
                   value={cardForm.dueDay}
-                  onChangeText={(value) => setCardForm((prev) => ({ ...prev, dueDay: value }))}
+                  onChangeText={(value) => setCardForm((prev) => ({ ...prev, dueDay: sanitizeDigits(value) }))}
                   placeholder="Vencimento"
                   placeholderTextColor={colors.textMuted}
                   keyboardType="number-pad"
@@ -562,7 +557,9 @@ export default function PlanejamentoScreen() {
                 <Text style={styles.fieldLabel}>Valor</Text>
                 <TextInput
                   value={recurringForm.amount}
-                  onChangeText={(value) => setRecurringForm((prev) => ({ ...prev, amount: value }))}
+                  onChangeText={(value) =>
+                    setRecurringForm((prev) => ({ ...prev, amount: normalizeCurrencyInput(value) }))
+                  }
                   placeholder="Valor"
                   placeholderTextColor={colors.textMuted}
                   keyboardType="decimal-pad"
@@ -573,7 +570,7 @@ export default function PlanejamentoScreen() {
                 <Text style={styles.fieldLabel}>Dia do mês</Text>
                 <TextInput
                   value={recurringForm.dayOfMonth}
-                  onChangeText={(value) => setRecurringForm((prev) => ({ ...prev, dayOfMonth: value }))}
+                  onChangeText={(value) => setRecurringForm((prev) => ({ ...prev, dayOfMonth: sanitizeDigits(value) }))}
                   placeholder="Dia"
                   placeholderTextColor={colors.textMuted}
                   keyboardType="number-pad"

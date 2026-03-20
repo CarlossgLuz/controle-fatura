@@ -22,6 +22,7 @@ import { listCategoriesByUsage, type Category } from '@/domain/finance';
 import { DEFAULT_CARD_CONFIG } from '@/domain/finance/types';
 import { useAppTheme } from '@/hooks/use-app-theme';
 import { useI18n } from '@/hooks/use-i18n';
+import { normalizeCurrencyInput, parseCurrencyInput, sanitizeDigits } from '@/utils/currency-input';
 
 type LaunchType = 'receita' | 'gasto';
 
@@ -40,12 +41,6 @@ function toIsoToday(date = new Date()): `${number}-${number}-${number}` {
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const day = String(date.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}` as `${number}-${number}-${number}`;
-}
-
-function parseAmount(raw: string): number {
-  const normalized = raw.replace(/\./g, '').replace(',', '.').trim();
-  const parsed = Number(normalized);
-  return Number.isFinite(parsed) ? parsed : NaN;
 }
 
 function usageFromType(type: LaunchType): 'income' | 'expense' {
@@ -133,7 +128,7 @@ export default function LancarScreen() {
   const validate = (): string | null => {
     if (!form.description.trim()) return strings.launch.validationDescription;
 
-    const amount = parseAmount(form.amount);
+    const amount = parseCurrencyInput(form.amount);
     if (!Number.isFinite(amount) || amount <= 0) return strings.launch.validationAmount;
 
     if (!categoryOptions.find((entry) => entry.id === form.categoryId)) {
@@ -166,7 +161,7 @@ export default function LancarScreen() {
       return;
     }
 
-    const amount = parseAmount(form.amount);
+    const amount = parseCurrencyInput(form.amount);
     setSaving(true);
     setError(null);
     setSuccess(null);
@@ -263,7 +258,7 @@ export default function LancarScreen() {
         <Text style={styles.label}>{strings.launch.amount}</Text>
         <TextInput
           value={form.amount}
-          onChangeText={(value) => onField('amount', value)}
+          onChangeText={(value) => onField('amount', normalizeCurrencyInput(value))}
           placeholder={strings.launch.valuePlaceholder}
           placeholderTextColor={colors.textMuted}
           keyboardType="decimal-pad"
@@ -288,7 +283,7 @@ export default function LancarScreen() {
                 <Text style={styles.label}>{strings.launch.installments}</Text>
                 <TextInput
                   value={form.installmentTotal}
-                  onChangeText={(value) => onField('installmentTotal', value)}
+                  onChangeText={(value) => onField('installmentTotal', sanitizeDigits(value))}
                   placeholder={strings.launch.installmentsPlaceholder}
                   placeholderTextColor={colors.textMuted}
                   keyboardType="number-pad"
@@ -299,7 +294,7 @@ export default function LancarScreen() {
                 <Text style={styles.label}>{strings.launch.installmentCurrent}</Text>
                 <TextInput
                   value={form.installmentCurrent}
-                  onChangeText={(value) => onField('installmentCurrent', value)}
+                  onChangeText={(value) => onField('installmentCurrent', sanitizeDigits(value))}
                   placeholder={strings.launch.installmentCurrentPlaceholder}
                   placeholderTextColor={colors.textMuted}
                   keyboardType="number-pad"

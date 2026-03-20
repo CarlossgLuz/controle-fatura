@@ -1,11 +1,11 @@
 import { CARTAO_PADRAO, type CategoriaCompra, type NovaCompraInput, type Parcela } from '@/domain/types';
+import { parseCurrencyInput } from '@/utils/currency-input';
 
 export interface CompraFormValues {
   valor: string;
   dataCompra: string;
   titulo: string;
   descricao: string;
-  local: string;
   categoria: CategoriaCompra;
   parcelaAtual: string;
   parcelaTotal: string;
@@ -15,7 +15,6 @@ export interface CompraFormErrors {
   valor?: string;
   dataCompra?: string;
   titulo?: string;
-  local?: string;
   categoria?: string;
   parcela?: string;
 }
@@ -36,12 +35,6 @@ export const CATEGORIAS_COMPRA: CategoriaCompra[] = [
   'assinaturas',
   'outros',
 ];
-
-function normalizeCurrency(raw: string): number {
-  const sanitized = raw.replace(/\./g, '').replace(',', '.').trim();
-  const parsed = Number(sanitized);
-  return Number.isFinite(parsed) ? parsed : NaN;
-}
 
 function isIsoDate(value: string): boolean {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
@@ -89,7 +82,6 @@ export function buildDefaultCompraFormValues(today: Date = new Date()): CompraFo
     dataCompra: `${year}-${month}-${day}`,
     titulo: '',
     descricao: '',
-    local: '',
     categoria: 'outros',
     parcelaAtual: '',
     parcelaTotal: '',
@@ -98,9 +90,8 @@ export function buildDefaultCompraFormValues(today: Date = new Date()): CompraFo
 
 export function validateCompraForm(values: CompraFormValues): CompraFormValidationResult {
   const errors: CompraFormErrors = {};
-  const valor = normalizeCurrency(values.valor);
+  const valor = parseCurrencyInput(values.valor);
   const titulo = values.titulo.trim();
-  const local = values.local.trim();
   const descricao = values.descricao.trim();
 
   if (!Number.isFinite(valor) || valor <= 0) {
@@ -113,10 +104,6 @@ export function validateCompraForm(values: CompraFormValues): CompraFormValidati
 
   if (titulo.length === 0) {
     errors.titulo = 'Título é obrigatório.';
-  }
-
-  if (local.length === 0) {
-    errors.local = 'Local é obrigatório.';
   }
 
   if (!CATEGORIAS_COMPRA.includes(values.categoria)) {
@@ -142,7 +129,7 @@ export function validateCompraForm(values: CompraFormValues): CompraFormValidati
       parcela: parcelaResult.parcela,
       titulo,
       descricao: descricao.length > 0 ? descricao : undefined,
-      local,
+      local: titulo,
       categoria: values.categoria,
     },
   };

@@ -89,6 +89,22 @@ export default function InicioScreen() {
     router.push('/compra');
   }, [router]);
 
+  const goToEditExpense = useCallback(
+    (item: NonNullable<HomeSnapshot>['recentMovements'][number]) => {
+      if (item.kind !== 'expense' || !item.entityId) return;
+
+      if (item.source === 'card') {
+        router.push({ pathname: '/compra', params: { id: item.entityId } });
+        return;
+      }
+
+      if (item.source === 'manual') {
+        router.push({ pathname: '/editar-gasto', params: { id: item.entityId } });
+      }
+    },
+    [router]
+  );
+
   const formatMovementMeta = useCallback(
     (item: NonNullable<HomeSnapshot>['recentMovements'][number]) => {
       return [formatIsoDate(item.date), item.installment ? `${item.installment.current}/${item.installment.total}` : null]
@@ -309,12 +325,21 @@ export default function InicioScreen() {
                       </View>
                     )}
 
-                    {item.kind === 'expense' && item.entityId && (item.source === 'manual' || item.source === 'card') ? (
-                      <Pressable
-                        style={({ pressed }) => [styles.inlineDeleteButton, pressed && styles.listItemPressed]}
-                        onPress={() => confirmRemoveMovement(item)}>
-                        <IconSymbol name="trash.fill" size={16} color={colors.expense} />
-                      </Pressable>
+                    {item.kind === 'expense' &&
+                    item.entityId &&
+                    (item.source === 'card' || item.source === 'manual') ? (
+                      <View style={styles.inlineActions}>
+                        <Pressable
+                          style={({ pressed }) => [styles.inlineEditButton, pressed && styles.listItemPressed]}
+                          onPress={() => goToEditExpense(item)}>
+                          <IconSymbol name="square.and.pencil" size={16} color={colors.primary} />
+                        </Pressable>
+                        <Pressable
+                          style={({ pressed }) => [styles.inlineDeleteButton, pressed && styles.listItemPressed]}
+                          onPress={() => confirmRemoveMovement(item)}>
+                          <IconSymbol name="trash.fill" size={16} color={colors.expense} />
+                        </Pressable>
+                      </View>
                     ) : null}
                   </View>
                 ))}
@@ -394,6 +419,20 @@ function createStyles(colors: ReturnType<typeof useAppTheme>['colors']) {
     },
     listItemPressed: {
       opacity: 0.88,
+    },
+    inlineActions: {
+      flexDirection: 'row',
+      gap: Spacing.xs,
+    },
+    inlineEditButton: {
+      width: 42,
+      height: 42,
+      borderRadius: Radius.md,
+      borderWidth: 1,
+      borderColor: `${colors.primary}33`,
+      backgroundColor: colors.surfaceElevated,
+      alignItems: 'center',
+      justifyContent: 'center',
     },
     inlineDeleteButton: {
       width: 42,

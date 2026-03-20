@@ -24,6 +24,7 @@ import {
 } from '@/domain';
 import { Radius, Spacing } from '@/constants/theme';
 import { useAppTheme } from '@/hooks/use-app-theme';
+import { formatCurrencyInput, normalizeCurrencyInput, sanitizeDigits } from '@/utils/currency-input';
 
 function gerarIdCompra(): string {
   return `cmp_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
@@ -86,11 +87,10 @@ export default function CompraScreen() {
         }
 
         setForm({
-          valor: String(compra.valor).replace('.', ','),
+          valor: formatCurrencyInput(compra.valor),
           dataCompra: compra.dataCompra,
           titulo: compra.titulo,
           descricao: compra.descricao ?? '',
-          local: compra.local,
           categoria: compra.categoria,
           parcelaAtual: compra.parcela ? String(compra.parcela.atual) : '',
           parcelaTotal: compra.parcela ? String(compra.parcela.total) : '',
@@ -121,12 +121,13 @@ export default function CompraScreen() {
   );
 
   const onField = <K extends keyof CompraFormValues>(key: K, value: CompraFormValues[K]) => {
-    setForm((prev) => ({ ...prev, [key]: value }));
+    const nextValue =
+      key === 'valor' ? normalizeCurrencyInput(String(value)) : value;
+    setForm((prev) => ({ ...prev, [key]: nextValue as CompraFormValues[K] }));
     if (
       key === 'valor' ||
       key === 'dataCompra' ||
       key === 'titulo' ||
-      key === 'local' ||
       key === 'categoria'
     ) {
       setErrors((prev) => ({ ...prev, [key]: undefined }));
@@ -197,7 +198,7 @@ export default function CompraScreen() {
               <Text style={themedStyles.label}>Valor *</Text>
               <TextInput
                 value={form.valor}
-                onChangeText={(value) => onField('valor', value)}
+                onChangeText={(value) => onField('valor', normalizeCurrencyInput(value))}
                 placeholder="0,00"
                 placeholderTextColor={colors.textMuted}
                 keyboardType="decimal-pad"
@@ -234,17 +235,6 @@ export default function CompraScreen() {
                 multiline
               />
 
-              <Text style={themedStyles.label}>Local *</Text>
-              <TextInput
-                value={form.local}
-                onChangeText={(value) => onField('local', value)}
-                placeholder="Ex: Supermercado Central"
-                placeholderTextColor={colors.textMuted}
-                returnKeyType="next"
-                style={themedStyles.input}
-              />
-              <ErrorText message={errors.local} color={colors.danger} />
-
               <Text style={themedStyles.label}>Categoria *</Text>
               <View style={themedStyles.chips}>
                 {CATEGORIAS_COMPRA.map((categoria) => {
@@ -267,7 +257,7 @@ export default function CompraScreen() {
               <View style={themedStyles.installmentRow}>
                 <TextInput
                   value={form.parcelaAtual}
-                  onChangeText={(value) => onField('parcelaAtual', value)}
+                  onChangeText={(value) => onField('parcelaAtual', sanitizeDigits(value))}
                   placeholder="Atual"
                   placeholderTextColor={colors.textMuted}
                   keyboardType="number-pad"
@@ -275,7 +265,7 @@ export default function CompraScreen() {
                 />
                 <TextInput
                   value={form.parcelaTotal}
-                  onChangeText={(value) => onField('parcelaTotal', value)}
+                  onChangeText={(value) => onField('parcelaTotal', sanitizeDigits(value))}
                   placeholder="Total"
                   placeholderTextColor={colors.textMuted}
                   keyboardType="number-pad"

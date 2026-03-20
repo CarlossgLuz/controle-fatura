@@ -13,6 +13,7 @@ export interface MonthlyMovement {
   title: string;
   amount: number;
   date: string;
+  createdAt: string;
   kind: 'income' | 'expense';
   source: 'manual' | 'recurring' | 'card';
   installment?: {
@@ -182,6 +183,7 @@ export function aggregateMonthFinanceData(input: {
     title: entry.description,
     amount: entry.amount,
     date: entry.date,
+    createdAt: entry.createdAt,
     kind: entry.kind,
     source: entry.source,
     installment: entry.installment
@@ -199,6 +201,7 @@ export function aggregateMonthFinanceData(input: {
     title: entry.titulo,
     amount: entry.valor,
     date: entry.dataCompra,
+    createdAt: entry.criadoEm,
     kind: 'expense',
     source: 'card',
     installment: entry.parcela
@@ -210,7 +213,14 @@ export function aggregateMonthFinanceData(input: {
   }));
 
   const recentMovements = uniqueMovementIds([...movementTransactions, ...movementPurchases])
-    .sort((a, b) => b.date.localeCompare(a.date))
+    .sort((a, b) => {
+      const dateCompare = b.date.localeCompare(a.date);
+      if (dateCompare !== 0) {
+        return dateCompare;
+      }
+
+      return b.createdAt.localeCompare(a.createdAt);
+    })
     .slice(0, 8);
 
   const categorySums = new Map<string, number>();

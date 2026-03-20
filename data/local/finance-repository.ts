@@ -300,6 +300,11 @@ export async function listTransactions(): Promise<Transaction[]> {
   return sanitized.map((entry) => entry.value).sort((a, b) => b.date.localeCompare(a.date));
 }
 
+export async function getTransactionById(transactionId: string): Promise<Transaction | null> {
+  const current = await listTransactions();
+  return current.find((entry) => entry.id === transactionId) ?? null;
+}
+
 export async function addTransaction(input: NewTransactionInput): Promise<Transaction> {
   const current = await listTransactions();
   const card = await getCardConfig();
