@@ -2,6 +2,8 @@
 
 Aplicativo open source para controle de gastos, compras no cartao, planejamento mensal e leitura de indicadores financeiros, construido com Expo, React Native, Expo Router e persistencia local.
 
+Site oficial: [clarium.vercel.app](https://clarium.vercel.app)
+
 ## Visao Geral
 
 O projeto foi pensado para uso local-first:
@@ -57,6 +59,12 @@ Atalhos comuns:
 - `npm run web`
 - `npm run android`
 - `npm run ios`
+
+## Download e Acesso
+
+O app tambem esta disponivel publicamente em:
+
+- [https://clarium.vercel.app](https://clarium.vercel.app)
 
 ## Scripts
 
