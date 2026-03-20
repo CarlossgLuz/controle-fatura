@@ -1,50 +1,99 @@
-# Welcome to your Expo app 👋
+# Clarium
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Aplicativo open source para controle de gastos, compras no cartao, planejamento mensal e leitura de indicadores financeiros, construido com Expo, React Native, Expo Router e persistencia local.
 
-## Get started
+## Visao Geral
 
-1. Install dependencies
+O projeto foi pensado para uso local-first:
 
-   ```bash
-   npm install
-   ```
+- lancamentos de receita e gasto manual
+- compras no cartao com ciclo de fatura
+- metas e recorrencias mensais
+- dashboard inicial e tela de insights
+- persistencia local com `expo-sqlite` e `expo-sqlite/kv-store`
 
-2. Start the app
+## Stack
 
-   ```bash
-   npx expo start
-   ```
+- Expo
+- React Native
+- Expo Router
+- TypeScript
+- SQLite local
 
-In the output, you'll find options to open the app in a
+## Estrutura
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
-
-```bash
-npm run reset-project
+```text
+app/                  rotas e telas
+components/           componentes reutilizaveis
+constants/            tema e tokens
+data/                 persistencia local e agregacoes
+domain/               regras de negocio
+hooks/                hooks de UI e preferencias
+providers/            providers globais
+utils/                utilitarios
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+## Como Rodar
 
-## Learn more
+### Requisitos
 
-To learn more about developing your project with Expo, look at the following resources:
+- Node.js 20+
+- npm 10+
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+### Instalar dependencias
 
-## Join the community
+```bash
+npm install
+```
 
-Join our community of developers creating universal apps.
+### Rodar em desenvolvimento
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+```bash
+npx expo start
+```
+
+Atalhos comuns:
+
+- `npm run web`
+- `npm run android`
+- `npm run ios`
+
+## Scripts
+
+```bash
+npm run start
+npm run web
+npm run android
+npm run ios
+npm run lint
+```
+
+## Funcionalidades Principais
+
+- lancamento manual com suporte a valores em `,` e `.`
+- compras com data, categoria, descricao e parcelamento
+- edicao de gastos recentes
+- exclusao de gastos simples, compras e parcelas futuras
+- planejamento mensal com meta, configuracao de cartao e recorrencias
+- insights por categoria, uso de pagamento e historico mensal
+
+## Persistencia
+
+Os dados sao armazenados localmente no dispositivo. Isso favorece simplicidade e privacidade local, mas tambem significa que o projeto ainda exige endurecimento adicional antes de um deploy de producao mais sensivel.
+
+## Open Source
+
+Este repositorio e distribuido sob a licenca MIT. Consulte:
+
+- [LICENSE](./LICENSE)
+- [NOTICE](./NOTICE)
+- [CONTRIBUTING.md](./CONTRIBUTING.md)
+- [SECURITY.md](./SECURITY.md)
+
+## Contribuicao
+
+Issues e pull requests sao bem-vindos. Antes de contribuir, leia [CONTRIBUTING.md](./CONTRIBUTING.md).
+
+## Seguranca
+
+Para reporte responsavel de falhas, consulte [SECURITY.md](./SECURITY.md).
