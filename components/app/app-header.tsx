@@ -42,17 +42,15 @@ const styles = StyleSheet.create({
     gap: Spacing.xs,
   },
   eyebrow: {
-    fontSize: 12,
-    letterSpacing: 0.4,
-    textTransform: 'uppercase',
-    fontWeight: '600',
+    fontSize: 13,
+    fontWeight: '500',
   },
   title: {
-    fontSize: 30,
-    fontWeight: '700',
+    fontSize: 26,
+    fontWeight: '800',
   },
   subtitle: {
-    fontSize: 14,
+    fontSize: 13,
     lineHeight: 20,
   },
 });

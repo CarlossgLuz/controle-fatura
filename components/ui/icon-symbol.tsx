@@ -34,6 +34,12 @@ const MAPPING = {
   'square.and.pencil': 'edit',
   'paperplane.fill': 'send',
   'chevron.left.forwardslash.chevron.right': 'code',
+  'plus': 'add',
+  'tray.fill': 'inbox',
+  'arrow.down.left': 'south-west',
+  'arrow.up.right': 'north-east',
+  'rectangle.stack.fill': 'view-carousel',
+  'chevron.left': 'chevron-left',
   'chevron.right': 'chevron-right',
 } as IconMapping;
 

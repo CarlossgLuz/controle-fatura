@@ -12,7 +12,7 @@ export default function TabLayout() {
   const insets = useSafeAreaInsets();
   const { colors, legacyColors } = useAppTheme();
   const { strings } = useI18n();
-  const tabBarHeight = 58 + Math.max(insets.bottom, 8);
+  const tabBarHeight = 62 + Math.max(insets.bottom, 8);
 
   return (
     <Tabs
@@ -33,7 +33,7 @@ export default function TabLayout() {
           paddingHorizontal: Platform.select({ ios: Spacing.lg, default: Spacing.md }),
         },
         tabBarItemStyle: {
-          borderRadius: Radius.md,
+          borderRadius: Radius.lg,
         },
         tabBarLabelStyle: {
           fontSize: 12,
@@ -52,6 +52,13 @@ export default function TabLayout() {
         options={{
           title: strings.tabs.launch,
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="plus.circle.fill" color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="extrato"
+        options={{
+          title: 'Extrato',
+          tabBarIcon: ({ color }) => <IconSymbol size={28} name="info.circle.fill" color={color} />,
         }}
       />
       <Tabs.Screen

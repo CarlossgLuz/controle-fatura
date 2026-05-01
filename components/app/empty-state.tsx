@@ -29,21 +29,24 @@ export function EmptyState({ title, description, actionLabel, onActionPress }: E
 const styles = StyleSheet.create({
   card: {
     borderWidth: 1,
-    borderRadius: Radius.md,
-    padding: Spacing.lg,
-    gap: Spacing.sm,
+    borderRadius: Radius.lg,
+    padding: Spacing.xl,
+    gap: 10,
+    alignItems: 'center',
   },
   title: {
-    fontSize: 15,
-    fontWeight: '600',
+    fontSize: 16,
+    fontWeight: '700',
+    textAlign: 'center',
   },
   description: {
     fontSize: 13,
     lineHeight: 19,
+    textAlign: 'center',
   },
   action: {
     minHeight: 40,
-    borderRadius: Radius.sm,
+    borderRadius: Radius.md,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: Spacing.md,

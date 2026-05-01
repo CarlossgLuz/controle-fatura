@@ -365,7 +365,7 @@ function createStyles(colors: ReturnType<typeof useAppTheme>['colors'], isDark: 
     typeChip: {
       flex: 1,
       minHeight: 46,
-      borderRadius: Radius.md,
+      borderRadius: Radius.lg,
       borderWidth: 1,
       borderColor: colors.border,
       backgroundColor: colors.surface,
@@ -395,13 +395,14 @@ function createStyles(colors: ReturnType<typeof useAppTheme>['colors'], isDark: 
       backgroundColor: colors.surface,
       borderColor: colors.border,
       borderWidth: 1,
-      borderRadius: Radius.md,
-      padding: Spacing.md,
-      gap: Spacing.sm,
+      borderRadius: Radius.xl,
+      padding: Spacing.lg,
+      gap: 12,
     },
     label: {
       color: colors.textSecondary,
       fontSize: 13,
+      fontWeight: '500',
       marginTop: Spacing.xs,
     },
     helperText: {
@@ -409,10 +410,11 @@ function createStyles(colors: ReturnType<typeof useAppTheme>['colors'], isDark: 
       fontSize: 12,
     },
     input: {
+      minHeight: 48,
       backgroundColor: colors.surfaceElevated,
       borderColor: colors.border,
       borderWidth: 1,
-      borderRadius: Radius.md,
+      borderRadius: Radius.lg,
       color: colors.textPrimary,
       fontSize: 15,
       paddingHorizontal: Spacing.md,
@@ -454,10 +456,11 @@ function createStyles(colors: ReturnType<typeof useAppTheme>['colors'], isDark: 
     },
     feedback: {
       fontSize: 13,
+      textAlign: 'center',
     },
     saveButton: {
       minHeight: 50,
-      borderRadius: Radius.md,
+      borderRadius: Radius.lg,
       backgroundColor: colors.primary,
       alignItems: 'center',
       justifyContent: 'center',
@@ -467,7 +470,7 @@ function createStyles(colors: ReturnType<typeof useAppTheme>['colors'], isDark: 
     },
     saveButtonText: {
       color: '#FFFFFF',
-      fontSize: 14,
+      fontSize: 15,
       fontWeight: '700',
     },
   });

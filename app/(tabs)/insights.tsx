@@ -555,9 +555,9 @@ function createStyles(colors: ReturnType<typeof useAppTheme>['colors']) {
       backgroundColor: colors.surface,
       borderWidth: 1,
       borderColor: colors.border,
-      borderRadius: Radius.md,
-      padding: Spacing.md,
-      gap: Spacing.sm,
+      borderRadius: Radius.xl,
+      padding: Spacing.lg,
+      gap: 12,
     },
     placeholder: {
       fontSize: 13,
@@ -566,7 +566,7 @@ function createStyles(colors: ReturnType<typeof useAppTheme>['colors']) {
       backgroundColor: colors.surface,
       borderWidth: 1,
       borderColor: colors.border,
-      borderRadius: Radius.md,
+      borderRadius: Radius.xl,
       padding: Spacing.lg,
     },
     loadingText: {
@@ -588,8 +588,8 @@ function createStyles(colors: ReturnType<typeof useAppTheme>['colors']) {
     },
     historyHero: {
       borderWidth: 1,
-      borderRadius: Radius.lg,
-      padding: Spacing.md,
+      borderRadius: Radius.xl,
+      padding: Spacing.lg,
       gap: Spacing.md,
     },
     historyHeroHeader: {
@@ -599,13 +599,13 @@ function createStyles(colors: ReturnType<typeof useAppTheme>['colors']) {
       gap: Spacing.sm,
     },
     historyHeroTitle: {
-      fontSize: 17,
-      fontWeight: '700',
+      fontSize: 18,
+      fontWeight: '800',
       textTransform: 'capitalize',
       flex: 1,
     },
     historyHeroBalance: {
-      fontSize: 22,
+      fontSize: 24,
       fontWeight: '800',
     },
     historyHeroSubtitle: {
@@ -630,8 +630,8 @@ function createStyles(colors: ReturnType<typeof useAppTheme>['colors']) {
     },
     historySummaryChip: {
       flex: 1,
-      borderRadius: Radius.md,
-      padding: Spacing.sm,
+      borderRadius: Radius.lg,
+      padding: Spacing.md,
       gap: 2,
     },
     historySummaryChipLabel: {
@@ -649,7 +649,7 @@ function createStyles(colors: ReturnType<typeof useAppTheme>['colors']) {
     historyMonthChip: {
       minWidth: 112,
       borderWidth: 1,
-      borderRadius: Radius.md,
+      borderRadius: Radius.lg,
       paddingVertical: Spacing.sm,
       paddingHorizontal: Spacing.md,
       gap: 2,
@@ -665,9 +665,9 @@ function createStyles(colors: ReturnType<typeof useAppTheme>['colors']) {
     },
     historyRow: {
       borderWidth: 1,
-      borderRadius: Radius.md,
-      padding: Spacing.sm,
-      gap: Spacing.xs,
+      borderRadius: Radius.lg,
+      padding: Spacing.md,
+      gap: Spacing.sm,
     },
     historyRowTop: {
       flexDirection: 'row',

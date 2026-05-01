@@ -31,9 +31,9 @@ type LegacyColorShape = {
 
 const darkTokens: ColorTokens = {
   background: '#0B1220',
-  surface: '#121A2A',
-  surfaceElevated: '#1A2539',
-  border: '#23324A',
+  surface: '#0F1826',
+  surfaceElevated: '#172438',
+  border: '#25354D',
   textPrimary: '#EAF0FA',
   textSecondary: '#B4C0D4',
   textMuted: '#8493AB',
@@ -50,7 +50,7 @@ const darkTokens: ColorTokens = {
 const lightTokens: ColorTokens = {
   background: '#F3F6FB',
   surface: '#FFFFFF',
-  surfaceElevated: '#EEF3FA',
+  surfaceElevated: '#EDF3FA',
   border: '#D9E2EF',
   textPrimary: '#142033',
   textSecondary: '#3A4B64',
@@ -94,10 +94,10 @@ export const Spacing = {
 };
 
 export const Radius = {
-  sm: 10,
-  md: 14,
-  lg: 18,
-  xl: 22,
+  sm: 12,
+  md: 16,
+  lg: 20,
+  xl: 24,
   pill: 999,
 };
 

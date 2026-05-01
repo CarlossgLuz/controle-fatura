@@ -35,8 +35,8 @@ export function TransactionListItem({ title, meta, amount, kind }: TransactionLi
 const styles = StyleSheet.create({
   row: {
     borderWidth: 1,
-    borderRadius: Radius.md,
-    padding: Spacing.sm,
+    borderRadius: Radius.lg,
+    padding: Spacing.md,
     gap: Spacing.xs,
     flexDirection: 'row',
     alignItems: 'center',

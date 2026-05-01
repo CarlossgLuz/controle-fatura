@@ -45,9 +45,9 @@ const styles = StyleSheet.create({
   card: {
     flex: 1,
     borderWidth: 1,
-    borderRadius: Radius.md,
-    padding: Spacing.md,
-    gap: Spacing.xs,
+    borderRadius: Radius.lg,
+    padding: 14,
+    gap: 4,
   },
   topRow: {
     flexDirection: 'row',
@@ -57,9 +57,10 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 12,
+    fontWeight: '500',
   },
   value: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '700',
   },
   caption: {

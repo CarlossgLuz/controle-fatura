@@ -55,11 +55,11 @@ function createStyles(colors: ReturnType<typeof useAppTheme>['colors'], isDarkMo
       flex: 1,
       justifyContent: 'center',
       paddingHorizontal: Spacing.xl,
-      gap: Spacing.lg,
+      gap: 14,
     },
     title: {
-      fontSize: 30,
-      fontWeight: '700',
+      fontSize: 34,
+      fontWeight: '800',
       color: colors.textPrimary,
     },
     subtitle: {
@@ -68,7 +68,7 @@ function createStyles(colors: ReturnType<typeof useAppTheme>['colors'], isDarkMo
       color: colors.textSecondary,
     },
     listCard: {
-      borderRadius: Radius.lg,
+      borderRadius: Radius.xl,
       borderWidth: 1,
       borderColor: colors.border,
       backgroundColor: colors.surface,
@@ -81,7 +81,7 @@ function createStyles(colors: ReturnType<typeof useAppTheme>['colors'], isDarkMo
     },
     button: {
       minHeight: 52,
-      borderRadius: Radius.md,
+      borderRadius: Radius.lg,
       alignItems: 'center',
       justifyContent: 'center',
       backgroundColor: colors.primary,

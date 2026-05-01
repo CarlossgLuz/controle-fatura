@@ -124,11 +124,11 @@ function createStyles(colors: ReturnType<typeof useAppTheme>['colors']) {
     },
     menuCard: {
       width: 274,
-      borderRadius: Radius.lg,
+      borderRadius: Radius.xl,
       borderWidth: 1,
       borderColor: colors.border,
       backgroundColor: colors.surface,
-      padding: Spacing.md,
+      padding: Spacing.lg,
       gap: Spacing.sm,
       shadowColor: '#000000',
       shadowOpacity: 0.16,
@@ -144,7 +144,6 @@ function createStyles(colors: ReturnType<typeof useAppTheme>['colors']) {
       fontSize: 11,
       fontWeight: '700',
       textTransform: 'uppercase',
-      letterSpacing: 0.4,
     },
     optionList: {
       gap: 6,

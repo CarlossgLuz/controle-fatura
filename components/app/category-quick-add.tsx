@@ -135,8 +135,8 @@ function createStyles(colors: ReturnType<typeof useAppTheme>['colors']) {
   return StyleSheet.create({
     trigger: {
       alignSelf: 'flex-start',
-      minHeight: 34,
-      borderRadius: Radius.sm,
+      minHeight: 38,
+      borderRadius: Radius.md,
       borderWidth: 1,
       borderColor: colors.border,
       backgroundColor: colors.surfaceElevated,
@@ -170,7 +170,7 @@ function createStyles(colors: ReturnType<typeof useAppTheme>['colors']) {
     },
     modalCard: {
       width: '100%',
-      borderRadius: Radius.lg,
+      borderRadius: Radius.xl,
       borderWidth: 1,
       borderColor: colors.border,
       backgroundColor: colors.surface,
@@ -179,16 +179,16 @@ function createStyles(colors: ReturnType<typeof useAppTheme>['colors']) {
     },
     title: {
       color: colors.textPrimary,
-      fontSize: 16,
-      fontWeight: '700',
+      fontSize: 18,
+      fontWeight: '800',
     },
     subtitle: {
       color: colors.textSecondary,
       fontSize: 13,
     },
     input: {
-      minHeight: 44,
-      borderRadius: Radius.md,
+      minHeight: 48,
+      borderRadius: Radius.lg,
       borderWidth: 1,
       borderColor: colors.border,
       backgroundColor: colors.surfaceElevated,
@@ -220,7 +220,7 @@ function createStyles(colors: ReturnType<typeof useAppTheme>['colors']) {
       gap: Spacing.sm,
       borderWidth: 1,
       borderColor: colors.border,
-      borderRadius: Radius.sm,
+      borderRadius: Radius.md,
       paddingHorizontal: Spacing.sm,
       paddingVertical: 6,
       backgroundColor: colors.surfaceElevated,
@@ -232,7 +232,7 @@ function createStyles(colors: ReturnType<typeof useAppTheme>['colors']) {
     },
     removeButton: {
       minHeight: 26,
-      borderRadius: Radius.sm,
+      borderRadius: Radius.md,
       borderWidth: 1,
       borderColor: colors.expense,
       justifyContent: 'center',
@@ -245,7 +245,7 @@ function createStyles(colors: ReturnType<typeof useAppTheme>['colors']) {
     },
     secondary: {
       minHeight: 38,
-      borderRadius: Radius.sm,
+      borderRadius: Radius.md,
       borderWidth: 1,
       borderColor: colors.border,
       backgroundColor: colors.surfaceElevated,
@@ -259,7 +259,7 @@ function createStyles(colors: ReturnType<typeof useAppTheme>['colors']) {
     },
     primary: {
       minHeight: 38,
-      borderRadius: Radius.sm,
+      borderRadius: Radius.md,
       backgroundColor: colors.primary,
       justifyContent: 'center',
       paddingHorizontal: Spacing.md,

@@ -737,17 +737,17 @@ function createStyles(colors: ReturnType<typeof useAppTheme>['colors'], isDarkMo
       backgroundColor: colors.surface,
       borderColor: colors.border,
       borderWidth: 1,
-      borderRadius: Radius.md,
-      padding: Spacing.md,
-      gap: Spacing.sm,
+      borderRadius: Radius.xl,
+      padding: Spacing.lg,
+      gap: 12,
     },
     card: {
       backgroundColor: colors.surface,
       borderColor: colors.border,
       borderWidth: 1,
-      borderRadius: Radius.md,
-      padding: Spacing.md,
-      gap: Spacing.sm,
+      borderRadius: Radius.xl,
+      padding: Spacing.lg,
+      gap: 12,
     },
     targetedCard: {
       borderColor: colors.primary,
@@ -757,7 +757,7 @@ function createStyles(colors: ReturnType<typeof useAppTheme>['colors'], isDarkMo
       backgroundColor: colors.surface,
       borderColor: colors.border,
       borderWidth: 1,
-      borderRadius: Radius.md,
+      borderRadius: Radius.xl,
       padding: Spacing.lg,
     },
     loadingText: {
@@ -768,13 +768,11 @@ function createStyles(colors: ReturnType<typeof useAppTheme>['colors'], isDarkMo
       color: colors.textPrimary,
       fontSize: 32,
       fontWeight: '800',
-      letterSpacing: -0.4,
     },
     bigValueMuted: {
       color: colors.textSecondary,
       fontSize: 24,
       fontWeight: '700',
-      letterSpacing: 0,
     },
     goalValueCard: {
       borderRadius: Radius.lg,
@@ -860,14 +858,15 @@ function createStyles(colors: ReturnType<typeof useAppTheme>['colors'], isDarkMo
       fontWeight: '600',
     },
     input: {
+      minHeight: 48,
       backgroundColor: colors.surfaceElevated,
       borderColor: colors.border,
       borderWidth: 1,
-      borderRadius: Radius.md,
+      borderRadius: Radius.lg,
       color: colors.textPrimary,
-      fontSize: 14,
+      fontSize: 15,
       paddingHorizontal: Spacing.md,
-      paddingVertical: 11,
+      paddingVertical: 12,
     },
     sectionLabel: {
       color: colors.textSecondary,
@@ -879,8 +878,8 @@ function createStyles(colors: ReturnType<typeof useAppTheme>['colors'], isDarkMo
     },
     typeChip: {
       flex: 1,
-      minHeight: 38,
-      borderRadius: Radius.md,
+      minHeight: 42,
+      borderRadius: Radius.lg,
       borderWidth: 1,
       borderColor: colors.border,
       backgroundColor: colors.surfaceElevated,
@@ -926,8 +925,8 @@ function createStyles(colors: ReturnType<typeof useAppTheme>['colors'], isDarkMo
       color: isDarkMode ? '#09111D' : '#FFFFFF',
     },
     primaryButton: {
-      minHeight: 40,
-      borderRadius: Radius.md,
+      minHeight: 44,
+      borderRadius: Radius.lg,
       backgroundColor: colors.primary,
       alignItems: 'center',
       justifyContent: 'center',
@@ -935,12 +934,12 @@ function createStyles(colors: ReturnType<typeof useAppTheme>['colors'], isDarkMo
     },
     primaryButtonText: {
       color: '#FFFFFF',
-      fontSize: 13,
+      fontSize: 14,
       fontWeight: '700',
     },
     secondaryButton: {
-      minHeight: 38,
-      borderRadius: Radius.md,
+      minHeight: 42,
+      borderRadius: Radius.lg,
       borderWidth: 1,
       borderColor: colors.border,
       backgroundColor: colors.surfaceElevated,
@@ -954,8 +953,8 @@ function createStyles(colors: ReturnType<typeof useAppTheme>['colors'], isDarkMo
       fontWeight: '600',
     },
     dangerButton: {
-      minHeight: 38,
-      borderRadius: Radius.md,
+      minHeight: 42,
+      borderRadius: Radius.lg,
       borderWidth: 1,
       borderColor: colors.expense,
       backgroundColor: colors.surface,
@@ -975,7 +974,7 @@ function createStyles(colors: ReturnType<typeof useAppTheme>['colors'], isDarkMo
     },
     segmentChip: {
       flex: 1,
-      minHeight: 34,
+      minHeight: 38,
       borderRadius: Radius.pill,
       borderWidth: 1,
       borderColor: colors.border,
@@ -1002,10 +1001,10 @@ function createStyles(colors: ReturnType<typeof useAppTheme>['colors'], isDarkMo
     itemCard: {
       borderWidth: 1,
       borderColor: colors.border,
-      borderRadius: Radius.md,
+      borderRadius: Radius.lg,
       backgroundColor: colors.surfaceElevated,
-      padding: Spacing.sm,
-      gap: Spacing.xs,
+      padding: Spacing.md,
+      gap: Spacing.sm,
     },
     itemCardInactive: {
       backgroundColor: colors.background,
@@ -1065,9 +1064,9 @@ function createStyles(colors: ReturnType<typeof useAppTheme>['colors'], isDarkMo
     categoryRow: {
       borderWidth: 1,
       borderColor: colors.border,
-      borderRadius: Radius.md,
+      borderRadius: Radius.lg,
       backgroundColor: colors.surfaceElevated,
-      padding: Spacing.sm,
+      padding: Spacing.md,
       gap: Spacing.sm,
     },
     categoryRowInactive: {
@@ -1093,8 +1092,8 @@ function createStyles(colors: ReturnType<typeof useAppTheme>['colors'], isDarkMo
       gap: Spacing.sm,
     },
     categoryActionButton: {
-      minHeight: 32,
-      borderRadius: Radius.sm,
+      minHeight: 34,
+      borderRadius: Radius.md,
       borderWidth: 1,
       borderColor: colors.border,
       backgroundColor: colors.surface,
@@ -1120,10 +1119,12 @@ function createStyles(colors: ReturnType<typeof useAppTheme>['colors'], isDarkMo
     errorText: {
       color: colors.expense,
       fontSize: 13,
+      textAlign: 'center',
     },
     successText: {
       color: colors.income,
       fontSize: 13,
+      textAlign: 'center',
     },
   });
 }

@@ -48,8 +48,8 @@ function createStyles(
     },
     title: {
       color: colors.textPrimary,
-      fontSize: 28,
-      fontWeight: '700',
+      fontSize: 26,
+      fontWeight: '800',
     },
     subtitle: {
       color: colors.textSecondary,
@@ -60,7 +60,7 @@ function createStyles(
       backgroundColor: colors.surface,
       borderColor: colors.border,
       borderWidth: 1,
-      borderRadius: Radius.md,
+      borderRadius: Radius.xl,
       padding: Spacing.lg,
       gap: Spacing.sm,
     },

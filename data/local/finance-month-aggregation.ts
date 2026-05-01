@@ -32,9 +32,10 @@ export interface MonthlyAggregation {
   balance: number;
   budgetTarget: number;
   budgetProgress: number;
+  movements: MonthlyMovement[];
   recentMovements: MonthlyMovement[];
-  expensesByCategory: Array<{ id: string; label: string; amount: number }>;
-  paymentUsage: Array<{ id: string; label: string; amount: number }>;
+  expensesByCategory: { id: string; label: string; amount: number }[];
+  paymentUsage: { id: string; label: string; amount: number }[];
   fixedVsVariable: {
     fixed: number;
     variable: number;
@@ -101,7 +102,7 @@ function mapPurchaseCategory(compra: Compra): string {
   return mapping[compra.categoria] ?? 'expense-other';
 }
 
-function toShare(items: Array<{ id: string; label: string; amount: number }>) {
+function toShare(items: { id: string; label: string; amount: number }[]) {
   const total = items.reduce((sum, item) => sum + item.amount, 0);
 
   if (total <= 0) {
@@ -212,16 +213,15 @@ export function aggregateMonthFinanceData(input: {
       : undefined,
   }));
 
-  const recentMovements = uniqueMovementIds([...movementTransactions, ...movementPurchases])
-    .sort((a, b) => {
-      const dateCompare = b.date.localeCompare(a.date);
-      if (dateCompare !== 0) {
-        return dateCompare;
-      }
+  const movements = uniqueMovementIds([...movementTransactions, ...movementPurchases]).sort((a, b) => {
+    const dateCompare = b.date.localeCompare(a.date);
+    if (dateCompare !== 0) {
+      return dateCompare;
+    }
 
-      return b.createdAt.localeCompare(a.createdAt);
-    })
-    .slice(0, 8);
+    return b.createdAt.localeCompare(a.createdAt);
+  });
+  const recentMovements = movements.slice(0, 8);
 
   const categorySums = new Map<string, number>();
   for (const entry of monthTransactions) {
@@ -289,6 +289,7 @@ export function aggregateMonthFinanceData(input: {
     balance,
     budgetTarget,
     budgetProgress,
+    movements,
     recentMovements,
     expensesByCategory,
     paymentUsage,

@@ -28,7 +28,7 @@ export function AppScreen({
     styles.content,
     {
       paddingBottom: insets.bottom + (footer ? 96 : Spacing.xxl),
-      paddingTop: Spacing.md,
+      paddingTop: Spacing.sm,
     },
     contentStyle,
   ];
@@ -81,7 +81,7 @@ const styles = StyleSheet.create({
   },
   content: {
     paddingHorizontal: Spacing.xl,
-    gap: Spacing.md,
+    gap: 14,
   },
   footer: {
     position: 'absolute',

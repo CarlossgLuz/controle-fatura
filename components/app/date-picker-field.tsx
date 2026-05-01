@@ -151,10 +151,11 @@ function createStyles(colors: ReturnType<typeof useAppTheme>['colors'], capitali
     label: {
       color: colors.textSecondary,
       fontSize: 13,
+      fontWeight: '500',
       marginTop: Spacing.xs,
     },
     field: {
-      minHeight: 46,
+      minHeight: 48,
       borderRadius: Radius.md,
       borderWidth: 1,
       borderColor: colors.border,
@@ -175,12 +176,12 @@ function createStyles(colors: ReturnType<typeof useAppTheme>['colors'], capitali
     },
     modalCard: {
       width: '100%',
-      borderRadius: Radius.lg,
+      borderRadius: Radius.xl,
       borderWidth: 1,
       borderColor: colors.border,
       backgroundColor: colors.surface,
-      padding: Spacing.md,
-      gap: Spacing.sm,
+      padding: Spacing.lg,
+      gap: Spacing.md,
     },
     modalHeader: {
       flexDirection: 'row',
@@ -189,8 +190,8 @@ function createStyles(colors: ReturnType<typeof useAppTheme>['colors'], capitali
     },
     modalTitle: {
       color: colors.textPrimary,
-      fontSize: 15,
-      fontWeight: '700',
+      fontSize: 16,
+      fontWeight: '800',
     },
     modalClose: {
       color: colors.primary,
@@ -205,7 +206,7 @@ function createStyles(colors: ReturnType<typeof useAppTheme>['colors'], capitali
     monthButton: {
       width: 32,
       height: 32,
-      borderRadius: Radius.sm,
+      borderRadius: Radius.md,
       borderWidth: 1,
       borderColor: colors.border,
       alignItems: 'center',
@@ -240,7 +241,7 @@ function createStyles(colors: ReturnType<typeof useAppTheme>['colors'], capitali
     day: {
       width: '14.2857%',
       aspectRatio: 1,
-      borderRadius: Radius.sm,
+      borderRadius: Radius.md,
       alignItems: 'center',
       justifyContent: 'center',
     },
@@ -264,7 +265,7 @@ function createStyles(colors: ReturnType<typeof useAppTheme>['colors'], capitali
     todayButton: {
       alignSelf: 'flex-end',
       minHeight: 34,
-      borderRadius: Radius.sm,
+      borderRadius: Radius.md,
       borderWidth: 1,
       borderColor: colors.border,
       backgroundColor: colors.surfaceElevated,

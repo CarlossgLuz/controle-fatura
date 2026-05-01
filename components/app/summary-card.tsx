@@ -45,9 +45,9 @@ export function SummaryCard({ label, value, tone = 'default', iconName }: Summar
 const styles = StyleSheet.create({
   card: {
     borderWidth: 1,
-    borderRadius: Radius.lg,
-    padding: Spacing.lg,
-    gap: Spacing.xs,
+    borderRadius: Radius.xl,
+    padding: Spacing.xl,
+    gap: 4,
   },
   topRow: {
     flexDirection: 'row',
@@ -57,10 +57,11 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 13,
+    fontWeight: '500',
   },
   value: {
-    fontSize: 34,
-    fontWeight: '700',
+    fontSize: 38,
+    fontWeight: '800',
   },
   valueStrong: {
     fontWeight: '800',

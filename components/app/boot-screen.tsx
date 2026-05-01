@@ -70,8 +70,8 @@ function createStyles(colors: ReturnType<typeof useAppTheme>['colors']) {
       marginBottom: Spacing.sm,
     },
     brandRing: {
-      width: 66,
-      height: 66,
+      width: 68,
+      height: 68,
       borderRadius: Radius.pill,
       borderWidth: 1,
       borderColor: `${colors.primary}66`,
@@ -81,14 +81,13 @@ function createStyles(colors: ReturnType<typeof useAppTheme>['colors']) {
     },
     brandLetter: {
       color: colors.primary,
-      fontSize: 28,
-      fontWeight: '700',
-      letterSpacing: 0.4,
+      fontSize: 30,
+      fontWeight: '800',
     },
     title: {
       color: colors.textPrimary,
-      fontSize: 22,
-      fontWeight: '700',
+      fontSize: 24,
+      fontWeight: '800',
       textAlign: 'center',
     },
     subtitle: {
@@ -106,7 +105,7 @@ function createStyles(colors: ReturnType<typeof useAppTheme>['colors']) {
       borderWidth: 1,
       borderColor: colors.border,
       backgroundColor: colors.surface,
-      paddingVertical: 7,
+      paddingVertical: 8,
       paddingHorizontal: Spacing.md,
     },
     dot: {
@@ -120,7 +119,6 @@ function createStyles(colors: ReturnType<typeof useAppTheme>['colors']) {
       fontSize: 12,
       fontWeight: '600',
       textTransform: 'uppercase',
-      letterSpacing: 0.3,
     },
   });
 }

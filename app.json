@@ -22,7 +22,8 @@
           }
         }
       ],
-      "expo-sqlite"
+      "expo-sqlite",
+      "expo-web-browser"
     ],
     "android": {
       "package": "com.carlosgabriel.clarium",

@@ -40,8 +40,8 @@ function createStyles(colors: ReturnType<typeof useAppTheme>['colors']) {
     },
     title: {
       color: colors.textPrimary,
-      fontSize: 28,
-      fontWeight: '700',
+      fontSize: 26,
+      fontWeight: '800',
     },
     text: {
       color: colors.textSecondary,
@@ -54,7 +54,7 @@ function createStyles(colors: ReturnType<typeof useAppTheme>['colors']) {
       backgroundColor: colors.surface,
       borderColor: colors.border,
       borderWidth: 1,
-      borderRadius: Radius.md,
+      borderRadius: Radius.lg,
       paddingHorizontal: Spacing.md,
       paddingVertical: Spacing.sm,
     },

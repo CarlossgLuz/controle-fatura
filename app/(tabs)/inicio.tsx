@@ -1,474 +1,417 @@
 import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
-
-import { getHomeDashboardSnapshot } from '@/data/local/home-dashboard';
 import {
-  AppHeader,
-  AppScreen,
-  EmptyState,
-  MetricCard,
-  ProgressCard,
-  SectionHeader,
-  SummaryCard,
-  TransactionListItem,
-} from '@/components/app';
+  Alert,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Radius, Spacing } from '@/constants/theme';
+import { getHomeDashboardSnapshot } from '@/data/local/home-dashboard';
 import {
   removeTransactionById,
   removeTransactionsByInstallmentGroupFromCurrent,
 } from '@/data/local/finance-repository';
 import { excluirCompra } from '@/data/sqlite';
 import { useAppTheme } from '@/hooks/use-app-theme';
-import { useI18n } from '@/hooks/use-i18n';
-import { devInfo, devWarn } from '@/utils/logger';
+import { devWarn } from '@/utils/logger';
 
 type HomeSnapshot = Awaited<ReturnType<typeof getHomeDashboardSnapshot>>;
+type Movement = NonNullable<HomeSnapshot>['recentMovements'][number];
+
+function formatIsoDate(isoDate: string): string {
+  const [year, month, day] = isoDate.split('-').map(Number);
+  if (!year || !month || !day) return isoDate;
+  const d = new Date(Date.UTC(year, month - 1, day));
+  return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', timeZone: 'UTC' });
+}
+
+function formatBRL(value: number) {
+  return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+}
+
+function monthName() {
+  return new Date().toLocaleDateString('pt-BR', { month: 'long' });
+}
 
 export default function InicioScreen() {
   const router = useRouter();
-  const { colors } = useAppTheme();
-  const { strings, formatCurrency, formatIsoDate, resolveSignedAmount } = useI18n();
-  const styles = createStyles(colors);
+  const { colors, mode } = useAppTheme();
+  const insets = useSafeAreaInsets();
+  const isDark = mode === 'dark';
+  const styles = createStyles(colors, isDark);
 
   const [snapshot, setSnapshot] = useState<HomeSnapshot | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const loadDashboard = useCallback(async () => {
-    devInfo('[inicio] loadDashboard:start');
-    setLoading(true);
-    setError(null);
-
-    try {
-      const data = await getHomeDashboardSnapshot(new Date());
-      setSnapshot(data);
-      devInfo('[inicio] loadDashboard:ok', {
-        monthKey: data.monthKey,
-        movements: data.recentMovements.length,
-      });
-    } catch (cause) {
-      const message = cause instanceof Error ? cause.message : strings.common.unknownError;
-      devWarn('[inicio] loadDashboard:error', message);
-      setError(__DEV__ ? strings.home.loadError(message) : strings.home.loadFailedDescription);
-    } finally {
-      setLoading(false);
-    }
-  }, [strings.common.unknownError, strings.home]);
-
-  useFocusEffect(
-    useCallback(() => {
-      loadDashboard();
-    }, [loadDashboard])
-  );
-
-  const monthTone = !snapshot ? 'default' : snapshot.monthBalance >= 0 ? 'income' : 'expense';
-
-  const goToLaunch = useCallback(
+  const openLaunch = useCallback(
     (type: 'receita' | 'gasto') => {
       router.push({ pathname: '/(tabs)/lancar', params: { type } });
     },
     [router]
   );
 
-  const goToPlanning = useCallback(
-    (section: 'budget' | 'card' | 'recurring', segment?: 'income' | 'fixed' | 'expense') => {
-      router.push({ pathname: '/(tabs)/planejamento', params: { section, segment } });
-    },
-    [router]
-  );
-
-  const goToCardPurchase = useCallback((purchaseId?: string) => {
-    if (purchaseId) {
-      router.push({ pathname: '/compra', params: { id: purchaseId } });
-      return;
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await getHomeDashboardSnapshot(new Date());
+      setSnapshot(data);
+    } catch (e) {
+      devWarn('[inicio] load error', e);
+      setError('Erro ao carregar dados.');
+    } finally {
+      setLoading(false);
     }
+  }, []);
 
-    router.push('/compra');
-  }, [router]);
+  useFocusEffect(useCallback(() => { load(); }, [load]));
 
-  const goToEditExpense = useCallback(
-    (item: NonNullable<HomeSnapshot>['recentMovements'][number]) => {
+  const confirmRemove = useCallback(
+    (item: Movement) => {
       if (item.kind !== 'expense' || !item.entityId) return;
-
-      if (item.source === 'card') {
-        router.push({ pathname: '/compra', params: { id: item.entityId } });
-        return;
-      }
-
-      if (item.source === 'manual') {
-        router.push({ pathname: '/editar-gasto', params: { id: item.entityId } });
-      }
-    },
-    [router]
-  );
-
-  const formatMovementMeta = useCallback(
-    (item: NonNullable<HomeSnapshot>['recentMovements'][number]) => {
-      return [formatIsoDate(item.date), item.installment ? `${item.installment.current}/${item.installment.total}` : null]
-        .filter(Boolean)
-        .join(' • ');
-    },
-    [formatIsoDate]
-  );
-
-  const confirmRemoveMovement = useCallback(
-    (item: NonNullable<HomeSnapshot>['recentMovements'][number]) => {
-      if (item.kind !== 'expense' || !item.entityId) return;
-
-      const title =
-        item.source === 'card' ? strings.home.removePurchaseTitle : strings.home.removeExpenseTitle;
-      const message =
-        item.source === 'card'
-          ? strings.home.removePurchaseDescription
-          : item.installment
-            ? strings.home.removeInstallmentDescription(item.installment.current, item.installment.total)
-            : strings.home.removeExpenseDescription;
-
-      Alert.alert(title, message, [
-        { text: strings.common.cancel, style: 'cancel' },
-        {
-          text: strings.common.remove,
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              if (item.source === 'card') {
-                await excluirCompra(item.entityId);
-              } else if (item.installment?.groupId) {
-                await removeTransactionsByInstallmentGroupFromCurrent(
-                  item.installment.groupId,
-                  item.installment.current
-                );
-              } else {
-                await removeTransactionById(item.entityId);
+      const isInstallment = Boolean(item.installment);
+      Alert.alert(
+        'Remover lancamento',
+        isInstallment
+          ? `Remover parcela ${item.installment!.current}/${item.installment!.total} e as seguintes?`
+          : 'Remover este lancamento?',
+        [
+          { text: 'Cancelar', style: 'cancel' },
+          {
+            text: 'Remover',
+            style: 'destructive',
+            onPress: async () => {
+              try {
+                if (item.source === 'card') {
+                  await excluirCompra(item.entityId);
+                } else if (item.installment?.groupId) {
+                  await removeTransactionsByInstallmentGroupFromCurrent(
+                    item.installment.groupId,
+                    item.installment.current
+                  );
+                } else {
+                  await removeTransactionById(item.entityId);
+                }
+                await load();
+              } catch {
+                setError('Erro ao remover. Tente novamente.');
               }
-
-              await loadDashboard();
-            } catch {
-              setError(strings.home.removeError);
-            }
+            },
           },
-        },
-      ]);
+        ]
+      );
     },
-    [
-      loadDashboard,
-      strings.common.cancel,
-      strings.common.remove,
-      strings.home,
-    ]
+    [load]
   );
+
+  const balance = snapshot?.monthBalance ?? 0;
+  const isPositive = balance >= 0;
+  const balanceColor = isPositive ? colors.income : colors.expense;
+  const month = monthName();
 
   return (
-    <AppScreen>
-      <AppHeader
-        eyebrow={strings.home.eyebrow}
-        title={strings.home.title}
-        subtitle={strings.home.subtitle}
-      />
-
-      {loading && !snapshot ? (
-        <View style={styles.cardLoading}>
-          <Text style={[styles.loadingText, { color: colors.textSecondary }]}>{strings.home.loading}</Text>
-        </View>
-      ) : null}
-
-      {!loading && error && !snapshot ? (
-        <EmptyState
-          title={strings.home.loadFailedTitle}
-          description={strings.home.loadFailedDescription}
-          actionLabel={strings.common.tryAgain}
-          onActionPress={loadDashboard}
-        />
-      ) : null}
-
-      {snapshot ? (
-        <>
+    <SafeAreaView style={styles.screen} edges={['top']}>
+      <ScrollView
+        contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 100 }]}
+        showsVerticalScrollIndicator={false}>
+        <View style={styles.header}>
+          <View>
+            <Text style={[styles.greeting, { color: colors.textMuted }]}>
+              {month.charAt(0).toUpperCase() + month.slice(1)}
+            </Text>
+            <Text style={[styles.appName, { color: colors.textPrimary }]}>Clarium</Text>
+          </View>
           <Pressable
-            style={({ pressed }) => [styles.cardPressable, pressed && styles.cardPressed]}
-            onPress={() => router.push('/(tabs)/insights')}>
-            <SummaryCard
-              label={strings.home.monthBalanceLabel(snapshot.monthLabel)}
-              value={formatCurrency(snapshot.monthBalance)}
-              tone={monthTone}
-              iconName="dollarsign.circle.fill"
-            />
+            style={[styles.headerBtn, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}
+            onPress={() => router.push('/(tabs)/planejamento')}>
+            <IconSymbol name="gearshape.fill" size={18} color={colors.textSecondary} />
           </Pressable>
+        </View>
 
-          <View style={styles.row}>
-            <Pressable
-              style={({ pressed }) => [styles.metricPressable, pressed && styles.cardPressed]}
-              onPress={() => goToLaunch('receita')}>
-              <MetricCard
-                label={strings.home.income}
-                value={formatCurrency(snapshot.monthIncome)}
-                iconName="plus.circle.fill"
-                tone="income"
-              />
+        <View style={[styles.balanceCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <Text style={[styles.balanceLabel, { color: colors.textMuted }]}>Saldo do mes</Text>
+          {loading && !snapshot ? (
+            <View style={[styles.skeletonBalance, { backgroundColor: colors.surfaceElevated }]} />
+          ) : (
+            <Text style={[styles.balanceValue, { color: balanceColor }]}>
+              {formatBRL(Math.abs(balance))}
+            </Text>
+          )}
+          {snapshot ? (
+            <Text style={[styles.balanceSign, { color: balanceColor }]}>
+              {isPositive ? 'positivo' : 'negativo'}
+            </Text>
+          ) : null}
+
+          <View style={[styles.balanceRow, { borderTopColor: colors.border }]}>
+            <Pressable style={styles.balanceMetric} onPress={() => openLaunch('receita')}>
+              <View style={[styles.metricDot, { backgroundColor: `${colors.income}20` }]}>
+                <View style={[styles.dotInner, { backgroundColor: colors.income }]} />
+              </View>
+              <View>
+                <Text style={[styles.metricLabel, { color: colors.textMuted }]}>Receitas</Text>
+                <Text style={[styles.metricValue, { color: colors.income }]}>
+                  {loading && !snapshot ? '-' : formatBRL(snapshot?.monthIncome ?? 0)}
+                </Text>
+              </View>
             </Pressable>
-            <Pressable
-              style={({ pressed }) => [styles.metricPressable, pressed && styles.cardPressed]}
-              onPress={() => goToLaunch('gasto')}>
-              <MetricCard
-                label={strings.home.expense}
-                value={formatCurrency(snapshot.monthExpense)}
-                iconName="minus.circle.fill"
-                tone="expense"
-              />
+
+            <View style={[styles.metricDivider, { backgroundColor: colors.border }]} />
+
+            <Pressable style={styles.balanceMetric} onPress={() => openLaunch('gasto')}>
+              <View style={[styles.metricDot, { backgroundColor: `${colors.expense}20` }]}>
+                <View style={[styles.dotInner, { backgroundColor: colors.expense }]} />
+              </View>
+              <View>
+                <Text style={[styles.metricLabel, { color: colors.textMuted }]}>Gastos</Text>
+                <Text style={[styles.metricValue, { color: colors.expense }]}>
+                  {loading && !snapshot ? '-' : formatBRL(snapshot?.monthExpense ?? 0)}
+                </Text>
+              </View>
             </Pressable>
           </View>
+        </View>
 
-          <View style={styles.row}>
+        {snapshot ? (
+          <View style={styles.statsRow}>
             <Pressable
-              style={({ pressed }) => [styles.metricPressable, pressed && styles.cardPressed]}
-              onPress={() => goToPlanning('recurring', 'fixed')}>
-              <MetricCard
-                label={strings.home.fixedMonth}
-                value={formatCurrency(snapshot.monthFixedExpense)}
-                iconName="pin.fill"
-                tone="warning"
-              />
+              style={[styles.statCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
+              onPress={() => router.push({ pathname: '/(tabs)/planejamento', params: { section: 'recurring', segment: 'fixed' } })}>
+              <IconSymbol name="pin.fill" size={16} color={colors.warning} />
+              <Text style={[styles.statLabel, { color: colors.textMuted }]}>Fixos/mes</Text>
+              <Text style={[styles.statValue, { color: colors.textPrimary }]}>
+                {formatBRL(snapshot.monthFixedExpense)}
+              </Text>
             </Pressable>
+
             <Pressable
-              style={({ pressed }) => [styles.metricPressable, pressed && styles.cardPressed]}
-              onPress={() => goToCardPurchase()}>
-              <MetricCard
-                label={strings.home.currentInvoice}
-                value={formatCurrency(snapshot.currentCardInvoice)}
-                iconName="creditcard.fill"
-                tone="info"
-              />
+              style={[styles.statCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
+              onPress={() => router.push('/compra')}>
+              <IconSymbol name="creditcard.fill" size={16} color={colors.info} />
+              <Text style={[styles.statLabel, { color: colors.textMuted }]}>Fatura atual</Text>
+              <Text style={[styles.statValue, { color: colors.textPrimary }]}>
+                {formatBRL(snapshot.currentCardInvoice)}
+              </Text>
             </Pressable>
           </View>
+        ) : null}
 
+        {snapshot && snapshot.budgetTarget > 0 ? (
           <Pressable
-            style={({ pressed }) => [styles.sectionCard, pressed && styles.cardPressed]}
-            onPress={() => goToPlanning('card')}>
-            <SectionHeader
-              title={strings.home.cardCycleTitle}
-              subtitle={strings.home.cardCycleSubtitle}
-              iconName="creditcard.fill"
-            />
+            style={[styles.budgetCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
+            onPress={() => router.push({ pathname: '/(tabs)/planejamento', params: { section: 'budget' } })}>
+            <View style={styles.budgetHeader}>
+              <View>
+                <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Meta do mes</Text>
+                <Text style={[styles.budgetSub, { color: colors.textMuted }]}>
+                  {formatBRL(snapshot.monthExpense)} de {formatBRL(snapshot.budgetTarget)}
+                </Text>
+              </View>
+              <Text style={[styles.budgetPercent, { color: snapshot.budgetProgress >= 1 ? colors.expense : colors.textPrimary }]}>
+                {Math.round(snapshot.budgetProgress * 100)}%
+              </Text>
+            </View>
+            <View style={[styles.progressTrack, { backgroundColor: colors.surfaceElevated }]}>
+              <View
+                style={[
+                  styles.progressFill,
+                  {
+                    width: `${Math.min(snapshot.budgetProgress * 100, 100)}%`,
+                    backgroundColor: snapshot.budgetProgress >= 1 ? colors.expense : snapshot.budgetProgress >= 0.8 ? colors.warning : colors.income,
+                  },
+                ]}
+              />
+            </View>
+          </Pressable>
+        ) : null}
+
+        {snapshot ? (
+          <Pressable
+            style={[styles.cycleCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
+            onPress={() => router.push({ pathname: '/(tabs)/planejamento', params: { section: 'card' } })}>
+            <View style={styles.cycleHeader}>
+              <IconSymbol name="creditcard.fill" size={15} color={colors.info} />
+              <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Ciclo do cartao</Text>
+            </View>
             <View style={styles.cycleRow}>
-              <View style={styles.cycleCol}>
-                <Text style={[styles.cycleLabel, { color: colors.textMuted }]}>{strings.home.closing}</Text>
+              <View style={[styles.cyclePill, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
+                <Text style={[styles.cycleLabel, { color: colors.textMuted }]}>Fechamento</Text>
                 <Text style={[styles.cycleValue, { color: colors.textPrimary }]}>
                   {formatIsoDate(snapshot.cardCycleClosing)}
                 </Text>
               </View>
-              <View style={styles.cycleCol}>
-                <Text style={[styles.cycleLabel, { color: colors.textMuted }]}>{strings.home.due}</Text>
+              <View style={[styles.cyclePill, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
+                <Text style={[styles.cycleLabel, { color: colors.textMuted }]}>Vencimento</Text>
                 <Text style={[styles.cycleValue, { color: colors.textPrimary }]}>
                   {formatIsoDate(snapshot.cardCycleDue)}
                 </Text>
               </View>
             </View>
           </Pressable>
+        ) : null}
 
-          <Pressable
-            style={({ pressed }) => [styles.cardPressable, pressed && styles.cardPressed]}
-            onPress={() => goToPlanning('budget')}>
-            <ProgressCard
-              title={strings.home.budgetTitle}
-              subtitle={
-                snapshot.budgetTarget > 0
-                  ? strings.home.budgetProgress(
-                      formatCurrency(snapshot.monthExpense),
-                      formatCurrency(snapshot.budgetTarget)
-                    )
-                  : strings.home.budgetNoTarget
-              }
-              progress={snapshot.budgetProgress}
-              iconName="target"
-            />
-          </Pressable>
+        <View style={[styles.recentCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <View style={styles.recentHeader}>
+            <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Ultimos lancamentos</Text>
+            <Pressable onPress={() => router.push('/(tabs)/extrato')}>
+              <Text style={[styles.seeAll, { color: colors.primary }]}>Ver extrato</Text>
+            </Pressable>
+          </View>
 
-          <View style={styles.sectionCard}>
-            <SectionHeader
-              title={strings.home.recentTitle}
-              subtitle={strings.home.recentSubtitle}
-              iconName="info.circle.fill"
-              actionLabel={strings.tabs.launch}
-              onActionPress={() => goToLaunch('gasto')}
-            />
+          {loading && !snapshot ? (
+            <View style={styles.loadingPlaceholder}>
+              {[0, 1, 2].map((i) => (
+                <View key={i} style={[styles.skeletonRow, { backgroundColor: colors.surfaceElevated }]} />
+              ))}
+            </View>
+          ) : snapshot?.recentMovements.length === 0 ? (
+            <View style={styles.emptyState}>
+              <IconSymbol name="tray.fill" size={28} color={colors.border} />
+              <Text style={[styles.emptyText, { color: colors.textMuted }]}>
+                Nenhum lancamento ainda
+              </Text>
+              <Pressable
+                style={[styles.emptyBtn, { backgroundColor: colors.primary }]}
+                onPress={() => openLaunch('gasto')}>
+                <Text style={styles.emptyBtnText}>Adicionar primeiro lancamento</Text>
+              </Pressable>
+            </View>
+          ) : (
+            <View style={styles.transactionList}>
+              {snapshot?.recentMovements.map((item) => {
+                const isIncome = item.kind === 'income';
+                const amtColor = isIncome ? colors.income : colors.expense;
+                const sign = isIncome ? '+' : '-';
+                const meta = [
+                  formatIsoDate(item.date),
+                  item.installment
+                    ? `${item.installment.current}/${item.installment.total}`
+                    : null,
+                ]
+                  .filter(Boolean)
+                  .join(' - ');
 
-            {snapshot.recentMovements.length === 0 ? (
-              <EmptyState
-                title={strings.home.emptyMovementsTitle}
-                description={strings.home.emptyMovementsDescription}
-              />
-            ) : (
-              <View style={styles.list}>
-                {snapshot.recentMovements.map((item) => (
-                  <View key={item.id} style={styles.listItemRow}>
-                    {item.source === 'card' ? (
+                return (
+                  <View key={item.id} style={[styles.txRow, { borderBottomColor: colors.border }]}>
+                    <View style={[styles.txIcon, { backgroundColor: `${amtColor}15` }]}>
+                      <IconSymbol
+                        name={isIncome ? 'arrow.down.left' : item.source === 'card' ? 'creditcard.fill' : 'arrow.up.right'}
+                        size={14}
+                        color={amtColor}
+                      />
+                    </View>
+                    <View style={styles.txInfo}>
+                      <Text style={[styles.txTitle, { color: colors.textPrimary }]} numberOfLines={1}>
+                        {item.title}
+                      </Text>
+                      <Text style={[styles.txMeta, { color: colors.textMuted }]}>{meta}</Text>
+                    </View>
+                    <Text style={[styles.txAmount, { color: amtColor }]}>
+                      {sign} {formatBRL(item.amount)}
+                    </Text>
+                    {item.kind === 'expense' && item.entityId ? (
                       <Pressable
-                        style={({ pressed }) => [styles.listItemMain, pressed && styles.listItemPressed]}
-                        onPress={() => goToCardPurchase(item.entityId)}>
-                        <TransactionListItem
-                          title={item.title}
-                          meta={formatMovementMeta(item)}
-                          amount={resolveSignedAmount(item.kind, item.amount)}
-                          kind={item.kind}
-                        />
+                        style={[styles.txDelete, { borderColor: `${colors.expense}30` }]}
+                        onPress={() => confirmRemove(item)}>
+                        <IconSymbol name="trash.fill" size={13} color={colors.expense} />
                       </Pressable>
-                    ) : (
-                      <View style={styles.listItemMain}>
-                        <TransactionListItem
-                          title={item.title}
-                          meta={formatMovementMeta(item)}
-                          amount={resolveSignedAmount(item.kind, item.amount)}
-                          kind={item.kind}
-                        />
-                      </View>
-                    )}
-
-                    {item.kind === 'expense' &&
-                    item.entityId &&
-                    (item.source === 'card' || item.source === 'manual') ? (
-                      <View style={styles.inlineActions}>
-                        <Pressable
-                          style={({ pressed }) => [styles.inlineEditButton, pressed && styles.listItemPressed]}
-                          onPress={() => goToEditExpense(item)}>
-                          <IconSymbol name="square.and.pencil" size={16} color={colors.primary} />
-                        </Pressable>
-                        <Pressable
-                          style={({ pressed }) => [styles.inlineDeleteButton, pressed && styles.listItemPressed]}
-                          onPress={() => confirmRemoveMovement(item)}>
-                          <IconSymbol name="trash.fill" size={16} color={colors.expense} />
-                        </Pressable>
-                      </View>
                     ) : null}
                   </View>
-                ))}
-              </View>
-            )}
-          </View>
-        </>
-      ) : null}
-
-      {error && snapshot ? (
-        <View style={styles.inlineFeedback}>
-          <Text style={[styles.inlineErrorText, { color: colors.expense }]}>{error}</Text>
-          <Pressable onPress={loadDashboard} style={styles.retryInline}>
-            <Text style={[styles.retryText, { color: colors.info }]}>{strings.home.refreshData}</Text>
-          </Pressable>
+                );
+              })}
+            </View>
+          )}
         </View>
-      ) : null}
-    </AppScreen>
+
+        {error ? (
+          <View style={[styles.errorBox, { backgroundColor: `${colors.expense}12`, borderColor: `${colors.expense}30` }]}>
+            <Text style={[styles.errorText, { color: colors.expense }]}>{error}</Text>
+            <Pressable onPress={load}>
+              <Text style={[styles.retryText, { color: colors.primary }]}>Tentar novamente</Text>
+            </Pressable>
+          </View>
+        ) : null}
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
-function createStyles(colors: ReturnType<typeof useAppTheme>['colors']) {
+function createStyles(colors: ReturnType<typeof useAppTheme>['colors'], isDark: boolean) {
   return StyleSheet.create({
-    row: {
-      flexDirection: 'row',
-      gap: Spacing.sm,
-    },
-    metricPressable: {
-      flex: 1,
-    },
-    cardPressable: {
-      borderRadius: Radius.lg,
-    },
-    sectionCard: {
-      backgroundColor: colors.surface,
-      borderWidth: 1,
-      borderColor: colors.border,
-      borderRadius: Radius.md,
-      padding: Spacing.md,
-      gap: Spacing.sm,
-    },
-    cardPressed: {
-      opacity: 0.88,
-    },
-    cycleRow: {
-      flexDirection: 'row',
-      gap: Spacing.sm,
-    },
-    cycleCol: {
-      flex: 1,
-      borderWidth: 1,
-      borderColor: colors.border,
-      borderRadius: Radius.sm,
-      paddingVertical: 10,
-      paddingHorizontal: Spacing.sm,
-      gap: 2,
-      backgroundColor: colors.surfaceElevated,
-    },
-    cycleLabel: {
-      fontSize: 12,
-      fontWeight: '600',
-    },
-    cycleValue: {
-      fontSize: 14,
-      fontWeight: '700',
-    },
-    list: {
-      gap: Spacing.sm,
-    },
-    listItemRow: {
+    screen: { flex: 1, backgroundColor: isDark ? '#0B1220' : '#F3F6FB' },
+    scroll: { paddingHorizontal: 20, gap: 14, paddingTop: 8 },
+    header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 8 },
+    greeting: { fontSize: 13, fontWeight: '500' },
+    appName: { fontSize: 26, fontWeight: '800' },
+    headerBtn: { width: 38, height: 38, borderRadius: 19, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+    balanceCard: { borderRadius: 20, borderWidth: 1, padding: 20, gap: 4 },
+    balanceLabel: { fontSize: 13, fontWeight: '500' },
+    balanceValue: { fontSize: 38, fontWeight: '800' },
+    balanceSign: { fontSize: 12, fontWeight: '600' },
+    skeletonBalance: { height: 46, width: '60%', borderRadius: 8 },
+    balanceRow: { flexDirection: 'row', marginTop: 16, paddingTop: 16, borderTopWidth: 1 },
+    balanceMetric: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10 },
+    metricDot: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
+    dotInner: { width: 10, height: 10, borderRadius: 5 },
+    metricLabel: { fontSize: 12, fontWeight: '500' },
+    metricValue: { fontSize: 15, fontWeight: '700', marginTop: 1 },
+    metricDivider: { width: 1, marginHorizontal: 12 },
+    statsRow: { flexDirection: 'row', gap: 12 },
+    statCard: { flex: 1, borderRadius: 16, borderWidth: 1, padding: 14, gap: 4 },
+    statLabel: { fontSize: 12, fontWeight: '500', marginTop: 4 },
+    statValue: { fontSize: 16, fontWeight: '700' },
+    budgetCard: { borderRadius: 16, borderWidth: 1, padding: 16, gap: 12 },
+    budgetHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+    budgetSub: { fontSize: 13, marginTop: 2 },
+    budgetPercent: { fontSize: 22, fontWeight: '800' },
+    progressTrack: { height: 6, borderRadius: 3, overflow: 'hidden' },
+    progressFill: { height: 6, borderRadius: 3 },
+    cycleCard: { borderRadius: 16, borderWidth: 1, padding: 16, gap: 12 },
+    cycleHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+    cycleRow: { flexDirection: 'row', gap: 10 },
+    cyclePill: { flex: 1, borderRadius: 12, borderWidth: 1, padding: 12, gap: 2 },
+    cycleLabel: { fontSize: 11, fontWeight: '600' },
+    cycleValue: { fontSize: 14, fontWeight: '700' },
+    recentCard: { borderRadius: 20, borderWidth: 1, padding: 16, gap: 14 },
+    recentHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+    sectionTitle: { fontSize: 16, fontWeight: '700' },
+    seeAll: { fontSize: 13, fontWeight: '600' },
+    loadingPlaceholder: { gap: 10 },
+    skeletonRow: { height: 48, borderRadius: 10 },
+    emptyState: { alignItems: 'center', gap: 10, paddingVertical: 24 },
+    emptyText: { fontSize: 14 },
+    emptyBtn: { borderRadius: 12, paddingHorizontal: 16, paddingVertical: 10, marginTop: 4 },
+    emptyBtnText: { color: '#FFF', fontSize: 14, fontWeight: '700' },
+    transactionList: { gap: 0 },
+    txRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: Spacing.sm,
+      gap: 10,
+      paddingVertical: 12,
+      borderBottomWidth: 1,
     },
-    listItemMain: {
-      flex: 1,
-    },
-    listItemPressed: {
-      opacity: 0.88,
-    },
-    inlineActions: {
-      flexDirection: 'row',
-      gap: Spacing.xs,
-    },
-    inlineEditButton: {
-      width: 42,
-      height: 42,
-      borderRadius: Radius.md,
+    txIcon: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
+    txInfo: { flex: 1 },
+    txTitle: { fontSize: 14, fontWeight: '600' },
+    txMeta: { fontSize: 12, marginTop: 2 },
+    txAmount: { fontSize: 14, fontWeight: '700' },
+    txDelete: {
+      width: 32,
+      height: 32,
+      borderRadius: 8,
       borderWidth: 1,
-      borderColor: `${colors.primary}33`,
-      backgroundColor: colors.surfaceElevated,
       alignItems: 'center',
       justifyContent: 'center',
     },
-    inlineDeleteButton: {
-      width: 42,
-      height: 42,
-      borderRadius: Radius.md,
-      borderWidth: 1,
-      borderColor: `${colors.expense}33`,
-      backgroundColor: colors.surfaceElevated,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    cardLoading: {
-      borderWidth: 1,
-      borderColor: colors.border,
-      borderRadius: Radius.md,
-      backgroundColor: colors.surface,
-      padding: Spacing.lg,
-    },
-    loadingText: {
-      fontSize: 14,
-    },
-    inlineFeedback: {
-      gap: Spacing.xs,
-      alignItems: 'center',
-    },
-    inlineErrorText: {
-      fontSize: 12,
-      textAlign: 'center',
-    },
-    retryInline: {
-      alignSelf: 'center',
-      paddingVertical: Spacing.xs,
-    },
-    retryText: {
-      fontSize: 13,
-      fontWeight: '600',
-    },
+    errorBox: { borderRadius: 12, borderWidth: 1, padding: 14, gap: 6, alignItems: 'center' },
+    errorText: { fontSize: 13 },
+    retryText: { fontSize: 13, fontWeight: '600' },
   });
 }

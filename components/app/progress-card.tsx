@@ -32,9 +32,9 @@ export function ProgressCard({ title, subtitle, progress, iconName }: ProgressCa
 const styles = StyleSheet.create({
   card: {
     borderWidth: 1,
-    borderRadius: Radius.md,
-    padding: Spacing.md,
-    gap: Spacing.sm,
+    borderRadius: Radius.lg,
+    padding: Spacing.lg,
+    gap: Spacing.md,
   },
   topRow: {
     flexDirection: 'row',
@@ -43,15 +43,14 @@ const styles = StyleSheet.create({
     gap: Spacing.sm,
   },
   title: {
-    fontSize: 15,
-    fontWeight: '600',
+    fontSize: 16,
+    fontWeight: '700',
   },
   subtitle: {
     fontSize: 13,
   },
   track: {
-    height: 10,
-    borderWidth: 1,
+    height: 8,
     borderRadius: Radius.pill,
     overflow: 'hidden',
   },
