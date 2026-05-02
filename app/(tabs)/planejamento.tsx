@@ -25,6 +25,8 @@ import {
 } from '@/data/local/finance-repository';
 import { listCategoriesByUsage, type Category, type RecurringEntry } from '@/domain/finance';
 import { useAppTheme } from '@/hooks/use-app-theme';
+import { useI18n } from '@/hooks/use-i18n';
+import type { AppStrings } from '@/locales/translations';
 import {
   formatCurrencyDisplay,
   normalizeCurrencyInput,
@@ -56,13 +58,6 @@ function toMonthKey(date = new Date()): `${number}-${number}` {
   return `${year}-${month}` as `${number}-${number}`;
 }
 
-function formatCurrency(value: number): string {
-  return value.toLocaleString('pt-BR', {
-    style: 'currency',
-    currency: 'BRL',
-  });
-}
-
 function usageFromRecurringType(type: RecurringCreateType): 'income' | 'expense' | 'fixed' {
   if (type === 'income') return 'income';
   if (type === 'fixed') return 'fixed';
@@ -83,17 +78,17 @@ function defaultRecurringForm(type: RecurringCreateType = 'fixed'): RecurringFor
   };
 }
 
-function categoryMeta(category: Category): string {
-  const kindLabel = category.kind === 'income' ? 'Entrada' : 'Saída';
+function categoryMeta(category: Category, strings: AppStrings['planning']): string {
+  const kindLabel = category.kind === 'income' ? strings.incomeMeta : strings.expenseMeta;
   const usageLabel =
     category.kind === 'income'
-      ? 'geral'
+      ? strings.generalMeta
       : category.usage === 'fixed'
-        ? 'fixo'
+        ? strings.fixedMeta
         : category.usage === 'variable'
-          ? 'variável'
-          : 'geral';
-  const scopeLabel = category.system ? 'padrão' : 'custom';
+          ? strings.variableMeta
+          : strings.generalMeta;
+  const scopeLabel = category.system ? strings.systemMeta : strings.customMeta;
   return `${kindLabel} · ${usageLabel} · ${scopeLabel}`;
 }
 
@@ -106,7 +101,9 @@ function clampProgress(value: number): number {
 export default function PlanejamentoScreen() {
   const params = useLocalSearchParams<{ section?: string; segment?: string }>();
   const { colors, mode } = useAppTheme();
+  const { strings, formatCurrency } = useI18n();
   const styles = createStyles(colors, mode === 'dark');
+  const planning = strings.planning;
 
   const [entries, setEntries] = useState<RecurringEntry[]>([]);
   const [allCategories, setAllCategories] = useState<Category[]>([]);
@@ -146,11 +143,11 @@ export default function PlanejamentoScreen() {
         dueDay: String(card.dueDay),
       });
     } catch {
-      setError('Não foi possível carregar o planejamento.');
+      setError(planning.loadError);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [planning.loadError]);
 
   useFocusEffect(
     useCallback(() => {
@@ -173,12 +170,12 @@ export default function PlanejamentoScreen() {
   const budgetProgressPercent = Math.round(Math.max(0, budgetProgressRaw) * 100);
   const budgetState =
     !budgetTarget || budgetTarget <= 0
-      ? 'Sem meta'
+      ? planning.stateNoGoal
       : budgetProgressRaw < 0.8
-        ? 'Dentro da meta'
+        ? planning.stateGood
         : budgetProgressRaw <= 1
-          ? 'Atenção'
-          : 'Acima da meta';
+          ? planning.stateWarning
+          : planning.stateDanger;
 
   const recurringOptions = useMemo(
     () => listCategoriesByUsage(categories, usageFromRecurringType(recurringForm.type)),
@@ -235,7 +232,7 @@ export default function PlanejamentoScreen() {
   const onSaveBudget = async () => {
     const amount = parseCurrencyDigits(budgetInput);
     if (!Number.isFinite(amount) || amount <= 0) {
-      setError('Informe uma meta mensal válida.');
+      setError(planning.budgetInvalid);
       return;
     }
 
@@ -245,9 +242,9 @@ export default function PlanejamentoScreen() {
     try {
       const updated = await upsertBudgetTarget(toMonthKey(), amount);
       setBudgetTarget(updated.targetAmount);
-      setSuccess('Meta mensal salva.');
+      setSuccess(planning.budgetSaveSuccess);
     } catch {
-      setError('Não foi possível salvar a meta.');
+      setError(planning.budgetSaveError);
     } finally {
       setSaving(false);
     }
@@ -258,9 +255,9 @@ export default function PlanejamentoScreen() {
       await clearBudgetConfig();
       setBudgetTarget(null);
       setBudgetInput('');
-      setSuccess('Meta mensal removida.');
+      setSuccess(planning.budgetClearSuccess);
     } catch {
-      setError('Não foi possível remover a meta.');
+      setError(planning.budgetClearError);
     }
   };
 
@@ -273,9 +270,9 @@ export default function PlanejamentoScreen() {
 
     try {
       await updateCardConfig({ name: cardForm.name, closingDay, dueDay });
-      setSuccess('Configuração do cartão salva.');
+      setSuccess(planning.cardSaveSuccess);
     } catch {
-      setError('Não foi possível salvar as configurações do cartão.');
+      setError(planning.cardSaveError);
     } finally {
       setSaving(false);
     }
@@ -285,32 +282,32 @@ export default function PlanejamentoScreen() {
     try {
       await resetCardConfig();
       await loadData();
-      setSuccess('Cartão restaurado para padrão.');
+      setSuccess(planning.cardRestoreSuccess);
     } catch {
-      setError('Não foi possível restaurar o cartão.');
+      setError(planning.cardRestoreError);
     }
   };
 
   const onCreateRecurring = async () => {
     if (!recurringForm.description.trim()) {
-      setError('Descrição da recorrência é obrigatória.');
+      setError(planning.recurringDescriptionRequired);
       return;
     }
 
     const amount = parseCurrencyDigits(recurringForm.amount);
     if (!Number.isFinite(amount) || amount <= 0) {
-      setError('Informe um valor válido para a recorrência.');
+      setError(planning.recurringAmountInvalid);
       return;
     }
 
     const day = Number(recurringForm.dayOfMonth);
     if (!Number.isInteger(day) || day < 1 || day > 31) {
-      setError('Dia do mês inválido para recorrência.');
+      setError(planning.recurringDayInvalid);
       return;
     }
 
     if (!recurringOptions.find((entry) => entry.id === recurringForm.categoryId)) {
-      setError('Selecione uma categoria válida para esta recorrência.');
+      setError(planning.recurringCategoryInvalid);
       return;
     }
 
@@ -331,10 +328,10 @@ export default function PlanejamentoScreen() {
       });
 
       setRecurringForm(defaultRecurringForm(recurringForm.type));
-      setSuccess('Recorrência criada.');
+      setSuccess(planning.recurringCreated);
       await loadData();
     } catch {
-      setError('Não foi possível criar a recorrência.');
+      setError(planning.recurringCreateError);
     } finally {
       setSaving(false);
     }
@@ -344,25 +341,25 @@ export default function PlanejamentoScreen() {
     try {
       await setRecurringEntryActive(entry.id, !entry.active);
       await loadData();
-      setSuccess(entry.active ? 'Recorrência desativada.' : 'Recorrência ativada.');
+      setSuccess(entry.active ? planning.recurringDeactivated : planning.recurringActivated);
     } catch {
-      setError('Não foi possível atualizar a recorrência.');
+      setError(planning.recurringUpdateError);
     }
   };
 
   const onDeleteRecurring = (entry: RecurringEntry) => {
-    Alert.alert('Excluir recorrência', `Deseja excluir "${entry.description}"?`, [
-      { text: 'Cancelar', style: 'cancel' },
+    Alert.alert(planning.recurringDeleteTitle, planning.recurringDeleteMessage(entry.description), [
+      { text: strings.common.cancel, style: 'cancel' },
       {
-        text: 'Excluir',
+        text: planning.delete,
         style: 'destructive',
         onPress: async () => {
           try {
             await removeRecurringEntryById(entry.id);
             await loadData();
-            setSuccess('Recorrência excluída.');
+            setSuccess(planning.recurringDeleted);
           } catch {
-            setError('Não foi possível excluir a recorrência.');
+            setError(planning.recurringDeleteError);
           }
         },
       },
@@ -373,30 +370,30 @@ export default function PlanejamentoScreen() {
     try {
       await setCategoryActive(category.id, !category.active);
       await loadData();
-      setSuccess(category.active ? 'Categoria ocultada.' : 'Categoria reativada.');
+      setSuccess(category.active ? planning.categoryHidden : planning.categoryReactivated);
     } catch {
-      setError('Não foi possível atualizar a categoria.');
+      setError(planning.categoryUpdateError);
     }
   };
 
   const onDeleteCategory = (category: Category) => {
     if (category.system) {
-      setError('Categorias padrão não podem ser excluídas. Use ocultar.');
+      setError(planning.categorySystemDeleteError);
       return;
     }
 
-    Alert.alert('Excluir categoria', `Deseja excluir "${category.name}"?`, [
-      { text: 'Cancelar', style: 'cancel' },
+    Alert.alert(planning.categoryDeleteTitle, planning.categoryDeleteMessage(category.name), [
+      { text: strings.common.cancel, style: 'cancel' },
       {
-        text: 'Excluir',
+        text: planning.delete,
         style: 'destructive',
         onPress: async () => {
           try {
             await removeCustomCategory(category.id);
             await loadData();
-            setSuccess('Categoria removida.');
+            setSuccess(planning.categoryDeleted);
           } catch (cause) {
-            const message = cause instanceof Error ? cause.message : 'Não foi possível excluir a categoria.';
+            const message = cause instanceof Error ? cause.message : planning.categoryDeleteError;
             setError(message);
           }
         },
@@ -407,36 +404,36 @@ export default function PlanejamentoScreen() {
   return (
     <AppScreen keyboardAware>
       <AppHeader
-        eyebrow="Seu mês"
-        title="Planejamento"
-        subtitle="Meta, cartão e recorrentes do mês."
+        eyebrow={planning.eyebrow}
+        title={planning.title}
+        subtitle={planning.subtitle}
       />
 
       {loading ? (
         <View style={styles.loadingCard}>
-          <Text style={styles.loadingText}>Carregando planejamento...</Text>
+          <Text style={styles.loadingText}>{planning.loading}</Text>
         </View>
       ) : null}
 
       {!loading ? (
         <>
           <View style={[styles.goalCard, highlightedSection === 'budget' && styles.targetedCard]}>
-            <SectionHeader title="Meta mensal" subtitle="Seu limite para este mês" iconName="target" />
+            <SectionHeader title={planning.budgetTitle} subtitle={planning.budgetSubtitle} iconName="target" />
             <View style={styles.goalValueCard}>
               <Text style={[styles.bigValue, !budgetTarget && styles.bigValueMuted]}>
-                {budgetTarget ? formatCurrency(budgetTarget) : 'Defina sua meta mensal'}
+                {budgetTarget ? formatCurrency(budgetTarget) : planning.budgetEmpty}
               </Text>
             </View>
             <View style={styles.goalSummaryRow}>
-              <Text style={styles.goalMeta}>Gasto no mês: {formatCurrency(monthExpense)}</Text>
+              <Text style={styles.goalMeta}>{planning.budgetSpent(formatCurrency(monthExpense))}</Text>
               <Text
                 style={[
                   styles.goalState,
-                  budgetState === 'Dentro da meta'
+                  budgetState === planning.stateGood
                     ? styles.goalStateGood
-                    : budgetState === 'Atenção'
+                    : budgetState === planning.stateWarning
                       ? styles.goalStateWarning
-                      : budgetState === 'Acima da meta'
+                      : budgetState === planning.stateDanger
                         ? styles.goalStateDanger
                         : styles.goalStateMuted,
                 ]}>
@@ -453,64 +450,64 @@ export default function PlanejamentoScreen() {
                         ? `${Math.max(6, Math.round(budgetProgress * 100))}%`
                         : '0%',
                   },
-                  budgetState === 'Dentro da meta'
+                  budgetState === planning.stateGood
                     ? styles.goalFillGood
-                    : budgetState === 'Atenção'
+                    : budgetState === planning.stateWarning
                       ? styles.goalFillWarning
-                      : budgetState === 'Acima da meta'
+                      : budgetState === planning.stateDanger
                         ? styles.goalFillDanger
                         : styles.goalFillDefault,
                 ]}
               />
             </View>
-            {budgetTarget ? <Text style={styles.goalPercent}>{budgetProgressPercent}% da meta</Text> : null}
-            <Text style={styles.fieldLabel}>Valor da meta</Text>
+            {budgetTarget ? <Text style={styles.goalPercent}>{planning.budgetPercent(budgetProgressPercent)}</Text> : null}
+            <Text style={styles.fieldLabel}>{planning.budgetValue}</Text>
             <TextInput
               value={formatCurrencyDisplay(budgetInput)}
               onChangeText={(value) => setBudgetInput(normalizeCurrencyInput(value))}
-              placeholder="Valor da meta"
+              placeholder={planning.budgetValue}
               placeholderTextColor={colors.textMuted}
               keyboardType="decimal-pad"
               style={styles.input}
             />
             <View style={styles.row}>
               <Pressable style={styles.primaryButton} onPress={onSaveBudget} disabled={saving}>
-                <Text style={styles.primaryButtonText}>Salvar meta</Text>
+                <Text style={styles.primaryButtonText}>{planning.budgetSave}</Text>
               </Pressable>
               <Pressable style={styles.secondaryButton} onPress={onClearBudget}>
-                <Text style={styles.secondaryButtonText}>Limpar</Text>
+                <Text style={styles.secondaryButtonText}>{planning.budgetClear}</Text>
               </Pressable>
             </View>
           </View>
 
           <View style={[styles.card, highlightedSection === 'card' && styles.targetedCard]}>
-            <SectionHeader title="Cartão" subtitle="Fechamento e vencimento" iconName="creditcard.fill" />
-            <Text style={styles.fieldLabel}>Nome do cartão</Text>
+            <SectionHeader title={planning.cardTitle} subtitle={planning.cardSubtitle} iconName="creditcard.fill" />
+            <Text style={styles.fieldLabel}>{planning.cardName}</Text>
             <TextInput
               value={cardForm.name}
               onChangeText={(value) => setCardForm((prev) => ({ ...prev, name: value }))}
-              placeholder="Nome do cartão"
+              placeholder={planning.cardName}
               placeholderTextColor={colors.textMuted}
               style={styles.input}
             />
             <View style={styles.row}>
               <View style={styles.fieldGroup}>
-                <Text style={styles.fieldLabel}>Dia de fechamento</Text>
+                <Text style={styles.fieldLabel}>{planning.cardClosingDay}</Text>
                 <TextInput
                   value={cardForm.closingDay}
                   onChangeText={(value) => setCardForm((prev) => ({ ...prev, closingDay: sanitizeDigits(value) }))}
-                  placeholder="Fechamento"
+                  placeholder={planning.cardClosingPlaceholder}
                   placeholderTextColor={colors.textMuted}
                   keyboardType="number-pad"
                   style={styles.input}
                 />
               </View>
               <View style={styles.fieldGroup}>
-                <Text style={styles.fieldLabel}>Dia de vencimento</Text>
+                <Text style={styles.fieldLabel}>{planning.cardDueDay}</Text>
                 <TextInput
                   value={cardForm.dueDay}
                   onChangeText={(value) => setCardForm((prev) => ({ ...prev, dueDay: sanitizeDigits(value) }))}
-                  placeholder="Vencimento"
+                  placeholder={planning.cardDuePlaceholder}
                   placeholderTextColor={colors.textMuted}
                   keyboardType="number-pad"
                   style={styles.input}
@@ -519,21 +516,21 @@ export default function PlanejamentoScreen() {
             </View>
             <View style={styles.row}>
               <Pressable style={styles.primaryButton} onPress={onSaveCard} disabled={saving}>
-                <Text style={styles.primaryButtonText}>Salvar cartão</Text>
+                <Text style={styles.primaryButtonText}>{planning.cardSave}</Text>
               </Pressable>
               <Pressable style={styles.secondaryButton} onPress={onResetCard}>
-                <Text style={styles.secondaryButtonText}>Restaurar</Text>
+                <Text style={styles.secondaryButtonText}>{planning.cardRestore}</Text>
               </Pressable>
             </View>
           </View>
 
           <View style={[styles.card, highlightedSection === 'recurring' && styles.targetedCard]}>
-            <SectionHeader title="Recorrentes" subtitle="Cadastre e acompanhe" iconName="arrow.clockwise.circle.fill" />
+            <SectionHeader title={planning.recurringTitle} subtitle={planning.recurringSubtitle} iconName="arrow.clockwise.circle.fill" />
 
             <View style={styles.typeRow}>
               {(['income', 'fixed', 'expense'] as RecurringCreateType[]).map((type) => {
                 const active = recurringForm.type === type;
-                const label = type === 'income' ? 'Receita' : type === 'fixed' ? 'Fixo' : 'Gasto';
+                const label = type === 'income' ? planning.income : type === 'fixed' ? planning.fixed : planning.expense;
                 return (
                   <Pressable
                     key={type}
@@ -550,34 +547,34 @@ export default function PlanejamentoScreen() {
               })}
             </View>
 
-            <Text style={styles.fieldLabel}>Descrição</Text>
+            <Text style={styles.fieldLabel}>{planning.description}</Text>
             <TextInput
               value={recurringForm.description}
               onChangeText={(value) => setRecurringForm((prev) => ({ ...prev, description: value }))}
-              placeholder="Descrição"
+              placeholder={planning.description}
               placeholderTextColor={colors.textMuted}
               style={styles.input}
             />
             <View style={styles.row}>
               <View style={styles.fieldGroup}>
-                <Text style={styles.fieldLabel}>Valor</Text>
+                <Text style={styles.fieldLabel}>{planning.amount}</Text>
                 <TextInput
               value={formatCurrencyDisplay(recurringForm.amount)}
                   onChangeText={(value) =>
                     setRecurringForm((prev) => ({ ...prev, amount: normalizeCurrencyInput(value) }))
                   }
-                  placeholder="Valor"
+                  placeholder={planning.amount}
                   placeholderTextColor={colors.textMuted}
                   keyboardType="decimal-pad"
                   style={styles.input}
                 />
               </View>
               <View style={styles.dayGroup}>
-                <Text style={styles.fieldLabel}>Dia do mês</Text>
+                <Text style={styles.fieldLabel}>{planning.dayOfMonth}</Text>
                 <TextInput
                   value={recurringForm.dayOfMonth}
                   onChangeText={(value) => setRecurringForm((prev) => ({ ...prev, dayOfMonth: sanitizeDigits(value) }))}
-                  placeholder="Dia"
+                  placeholder={planning.dayOfMonth}
                   placeholderTextColor={colors.textMuted}
                   keyboardType="number-pad"
                   style={styles.input}
@@ -585,9 +582,9 @@ export default function PlanejamentoScreen() {
               </View>
             </View>
 
-            <Text style={styles.sectionLabel}>Categoria</Text>
+            <Text style={styles.sectionLabel}>{planning.categorySection}</Text>
             {recurringOptions.length === 0 ? (
-              <EmptyState title="Sem categorias" description="Crie uma categoria para continuar." />
+              <EmptyState title={planning.categoryCreateEmptyTitle} description={planning.categoryCreateEmptyDescription} />
             ) : (
               <View style={styles.chips}>
                 <CategoryQuickAdd
@@ -625,13 +622,13 @@ export default function PlanejamentoScreen() {
             )}
 
             <Pressable style={styles.primaryButton} onPress={onCreateRecurring} disabled={saving}>
-              <Text style={styles.primaryButtonText}>Adicionar recorrência</Text>
+              <Text style={styles.primaryButtonText}>{planning.recurringAdd}</Text>
             </Pressable>
 
             <View style={styles.segmentRow}>
               {(['income', 'fixed', 'expense'] as RecurringSegment[]).map((segment) => {
                 const active = activeSegment === segment;
-                const label = segment === 'income' ? 'Receitas' : segment === 'fixed' ? 'Fixos' : 'Gastos';
+                const label = segment === 'income' ? strings.home.income : segment === 'fixed' ? strings.insights.fixedLabel : strings.home.expense;
                 return (
                   <Pressable
                     key={segment}
@@ -644,7 +641,7 @@ export default function PlanejamentoScreen() {
             </View>
 
             {visibleEntries.length === 0 ? (
-              <EmptyState title="Sem recorrentes" description="Cadastre uma recorrência para começar." />
+              <EmptyState title={planning.recurringEmptyTitle} description={planning.recurringEmptyDescription} />
             ) : (
               <View style={styles.list}>
                 {visibleEntries.map((entry) => (
@@ -664,20 +661,20 @@ export default function PlanejamentoScreen() {
                     </View>
                     <View style={styles.metaRow}>
                       <Text style={[styles.itemMeta, !entry.active && styles.itemMetaInactive]}>
-                        Mensal · Dia {entry.dayOfMonth}
+                        {planning.monthlyDay(entry.dayOfMonth)}
                       </Text>
                       {!entry.active ? (
                         <View style={styles.inactiveBadge}>
-                          <Text style={styles.inactiveBadgeText}>Desativada</Text>
+                          <Text style={styles.inactiveBadgeText}>{planning.inactive}</Text>
                         </View>
                       ) : null}
                     </View>
                     <View style={styles.row}>
                       <Pressable style={styles.secondaryButton} onPress={() => onToggleRecurring(entry)}>
-                        <Text style={styles.secondaryButtonText}>{entry.active ? 'Desativar' : 'Ativar'}</Text>
+                        <Text style={styles.secondaryButtonText}>{entry.active ? planning.deactivate : planning.activate}</Text>
                       </Pressable>
                       <Pressable style={styles.dangerButton} onPress={() => onDeleteRecurring(entry)}>
-                        <Text style={styles.dangerText}>Excluir</Text>
+                        <Text style={styles.dangerText}>{planning.delete}</Text>
                       </Pressable>
                     </View>
                   </View>
@@ -687,9 +684,9 @@ export default function PlanejamentoScreen() {
           </View>
 
           <View style={styles.card}>
-            <SectionHeader title="Categorias" subtitle="Organize o que aparece no app" iconName="pin.fill" />
+            <SectionHeader title={planning.categorySection} subtitle={planning.categoryManagementSubtitle} iconName="pin.fill" />
             {categoriesForManagement.length === 0 ? (
-              <EmptyState title="Sem categorias" description="Crie categorias para personalizar o fluxo." />
+              <EmptyState title={planning.categoryEmptyTitle} description={planning.categoryEmptyDescription} />
             ) : (
               <View style={styles.list}>
                 {categoriesForManagement.map((category) => (
@@ -698,7 +695,7 @@ export default function PlanejamentoScreen() {
                       <Text style={[styles.categoryName, !category.active && styles.categoryNameInactive]}>
                         {category.name}
                       </Text>
-                      <Text style={styles.categoryMeta}>{categoryMeta(category)}</Text>
+                      <Text style={styles.categoryMeta}>{categoryMeta(category, planning)}</Text>
                     </View>
 
                     <View style={styles.categoryActions}>
@@ -710,7 +707,7 @@ export default function PlanejamentoScreen() {
                           size={14}
                           color={colors.textSecondary}
                         />
-                        <Text style={styles.categoryActionText}>{category.active ? 'Ocultar' : 'Ativar'}</Text>
+                        <Text style={styles.categoryActionText}>{category.active ? planning.hide : planning.activate}</Text>
                       </Pressable>
 
                       {!category.system ? (
@@ -718,7 +715,7 @@ export default function PlanejamentoScreen() {
                           style={[styles.categoryActionButton, styles.categoryActionDanger]}
                           onPress={() => onDeleteCategory(category)}>
                           <IconSymbol name="trash.fill" size={14} color={colors.expense} />
-                          <Text style={styles.categoryActionDangerText}>Excluir</Text>
+                          <Text style={styles.categoryActionDangerText}>{planning.delete}</Text>
                         </Pressable>
                       ) : null}
                     </View>

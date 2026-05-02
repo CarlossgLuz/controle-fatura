@@ -16,6 +16,8 @@ Este projeto aceita contribuicoes focadas em qualidade de codigo, estabilidade, 
 - Prefira mudancas pequenas e objetivas.
 - Nao introduza dependencia nova sem justificativa.
 - Mantenha compatibilidade com Android, iOS e Web quando aplicavel.
+- Nao adicione texto visivel direto em telas/componentes; inclua em `locales/translations.ts` e consuma com `useI18n`.
+- Nao use `toLocaleString('pt-BR')` em UI; use os formatadores de `useI18n`.
 
 ## Checklist de PR
 
@@ -23,6 +25,10 @@ Este projeto aceita contribuicoes focadas em qualidade de codigo, estabilidade, 
 - resumo objetivo da solucao
 - riscos conhecidos
 - passos de validacao manual
+- validacao de textos nos idiomas `pt-BR`, `en` e `es` quando houver mudanca de UI
+- `npm run lint`
+- `npm run typecheck`
+- `npm run web:export` quando tocar Web, rotas, persistencia ou layout
 
 ## Areas Sensiveis
 

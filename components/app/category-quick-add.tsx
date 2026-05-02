@@ -3,6 +3,7 @@ import { Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-nativ
 
 import { Radius, Spacing } from '@/constants/theme';
 import { useAppTheme } from '@/hooks/use-app-theme';
+import { useI18n } from '@/hooks/use-i18n';
 
 type CategoryKind = 'income' | 'expense';
 type CategoryUsage = 'all' | 'fixed' | 'variable';
@@ -26,6 +27,7 @@ export function CategoryQuickAdd({
   triggerMode = 'button',
 }: CategoryQuickAddProps) {
   const { colors } = useAppTheme();
+  const { strings } = useI18n();
   const styles = createStyles(colors);
 
   const [open, setOpen] = useState(false);
@@ -40,16 +42,16 @@ export function CategoryQuickAdd({
         style={triggerMode === 'chip' ? styles.triggerChip : styles.trigger}
         onPress={() => setOpen(true)}>
         <Text style={triggerMode === 'chip' ? styles.triggerChipText : styles.triggerText}>
-          + Criar categoria
+          + {strings.categoryQuickAdd.trigger}
         </Text>
       </Pressable>
 
       <Modal transparent visible={open} animationType="fade" onRequestClose={() => setOpen(false)}>
         <View style={styles.overlay}>
           <View style={styles.modalCard}>
-            <Text style={styles.title}>Nova categoria</Text>
+            <Text style={styles.title}>{strings.categoryQuickAdd.title}</Text>
             <Text style={styles.subtitle}>
-              {kind === 'income' ? 'Receita' : usage === 'fixed' ? 'Fixo' : 'Gasto'}
+              {kind === 'income' ? strings.planning.income : usage === 'fixed' ? strings.planning.fixed : strings.planning.expense}
             </Text>
 
             <TextInput
@@ -58,7 +60,7 @@ export function CategoryQuickAdd({
                 setName(value);
                 setError(null);
               }}
-              placeholder="Nome da categoria"
+              placeholder={strings.categoryQuickAdd.namePlaceholder}
               placeholderTextColor={colors.textMuted}
               style={styles.input}
             />
@@ -67,7 +69,7 @@ export function CategoryQuickAdd({
 
             {customCategories.length > 0 ? (
               <View style={styles.customList}>
-                <Text style={styles.customTitle}>Categorias customizadas</Text>
+                <Text style={styles.customTitle}>{strings.categoryQuickAdd.customTitle}</Text>
                 {customCategories.map((category) => (
                   <View key={category.id} style={styles.customItem}>
                     <Text style={styles.customItemText}>{category.name}</Text>
@@ -79,7 +81,7 @@ export function CategoryQuickAdd({
                           try {
                             await onRemove(category.id);
                           } catch (cause) {
-                            const message = cause instanceof Error ? cause.message : 'Não foi possível remover.';
+                            const message = cause instanceof Error ? cause.message : strings.categoryQuickAdd.removeError;
                             setError(message);
                           } finally {
                             setRemovingId(null);
@@ -88,7 +90,7 @@ export function CategoryQuickAdd({
                         style={styles.removeButton}
                         disabled={removingId === category.id}>
                         <Text style={styles.removeText}>
-                          {removingId === category.id ? '...' : 'Remover'}
+                          {removingId === category.id ? '...' : strings.common.remove}
                         </Text>
                       </Pressable>
                     ) : null}
@@ -99,14 +101,14 @@ export function CategoryQuickAdd({
 
             <View style={styles.row}>
               <Pressable style={styles.secondary} onPress={() => setOpen(false)}>
-                <Text style={styles.secondaryText}>Cancelar</Text>
+                <Text style={styles.secondaryText}>{strings.common.cancel}</Text>
               </Pressable>
               <Pressable
                 style={[styles.primary, saving && styles.disabled]}
                 disabled={saving}
                 onPress={async () => {
                   if (!name.trim()) {
-                    setError('Nome é obrigatório.');
+                    setError(strings.categoryQuickAdd.nameRequired);
                     return;
                   }
 
@@ -116,12 +118,12 @@ export function CategoryQuickAdd({
                     setName('');
                     setOpen(false);
                   } catch {
-                    setError('Não foi possível salvar agora.');
+                    setError(strings.categoryQuickAdd.saveError);
                   } finally {
                     setSaving(false);
                   }
                 }}>
-                <Text style={styles.primaryText}>{saving ? 'Salvando...' : 'Salvar'}</Text>
+                <Text style={styles.primaryText}>{saving ? strings.launch.saving : strings.common.save}</Text>
               </Pressable>
             </View>
           </View>

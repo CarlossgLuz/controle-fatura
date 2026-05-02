@@ -7,6 +7,7 @@ import { LaunchSheet } from '@/components/app/launch-sheet';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Radius, Spacing } from '@/constants/theme';
 import { useAppTheme } from '@/hooks/use-app-theme';
+import { useI18n } from '@/hooks/use-i18n';
 import { LaunchSheetProvider, useLaunchSheet } from '@/providers/launch-sheet-context';
 
 function FabButton() {
@@ -27,6 +28,7 @@ function FabButton() {
 function TabsInner() {
   const insets = useSafeAreaInsets();
   const { colors, legacyColors } = useAppTheme();
+  const { strings } = useI18n();
   const tabBarHeight = 62 + Math.max(insets.bottom, 8);
 
   return (
@@ -59,14 +61,14 @@ function TabsInner() {
         <Tabs.Screen
           name="inicio"
           options={{
-            title: 'Inicio',
+            title: strings.tabs.home,
             tabBarIcon: ({ color }) => <IconSymbol size={25} name="house.fill" color={color} />,
           }}
         />
         <Tabs.Screen
           name="extrato"
           options={{
-            title: 'Extrato',
+            title: strings.tabs.extract,
             tabBarIcon: ({ color }) => <IconSymbol size={25} name="list.bullet.rectangle.fill" color={color} />,
           }}
         />
@@ -81,14 +83,14 @@ function TabsInner() {
         <Tabs.Screen
           name="planejamento"
           options={{
-            title: 'Planejar',
+            title: strings.tabs.planning,
             tabBarIcon: ({ color }) => <IconSymbol size={25} name="calendar.circle.fill" color={color} />,
           }}
         />
         <Tabs.Screen
           name="insights"
           options={{
-            title: 'Insights',
+            title: strings.tabs.insights,
             tabBarIcon: ({ color }) => <IconSymbol size={25} name="chart.bar.fill" color={color} />,
           }}
         />

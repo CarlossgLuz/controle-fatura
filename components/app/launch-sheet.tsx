@@ -22,6 +22,7 @@ import {
 import { listCategoriesByUsage, type Category } from '@/domain/finance';
 import { DEFAULT_CARD_CONFIG } from '@/domain/finance/types';
 import { useAppTheme } from '@/hooks/use-app-theme';
+import { useI18n } from '@/hooks/use-i18n';
 import { type LaunchType, useLaunchSheet } from '@/providers/launch-sheet-context';
 import {
   formatCurrencyDisplay,
@@ -61,6 +62,7 @@ function defaultForm(type: LaunchType = 'gasto'): LaunchForm {
 export function LaunchSheet() {
   const { isOpen, defaultType, closeSheet, markChanged } = useLaunchSheet();
   const { colors, mode } = useAppTheme();
+  const { strings } = useI18n();
   const insets = useSafeAreaInsets();
   const isDark = mode === 'dark';
   const styles = createStyles(colors, isDark);
@@ -144,17 +146,17 @@ export function LaunchSheet() {
   };
 
   const validate = (): string | null => {
-    if (!form.description.trim()) return 'Informe uma descricao.';
+    if (!form.description.trim()) return strings.launch.validationDescription;
 
     const amount = parseCurrencyDigits(form.amount);
-    if (!Number.isFinite(amount) || amount <= 0) return 'Informe um valor valido.';
-    if (!categoryOptions.find((category) => category.id === form.categoryId)) return 'Selecione uma categoria.';
+    if (!Number.isFinite(amount) || amount <= 0) return strings.launch.validationAmount;
+    if (!categoryOptions.find((category) => category.id === form.categoryId)) return strings.launch.validationCategory;
 
     if (form.type === 'gasto') {
       const total = Number(form.installmentTotal || '1');
       const current = Number(form.installmentCurrent || '1');
-      if (!Number.isInteger(total) || total < 1 || total > 36) return 'Total de parcelas invalido (1-36).';
-      if (!Number.isInteger(current) || current < 1 || current > total) return 'Parcela atual invalida.';
+      if (!Number.isInteger(total) || total < 1 || total > 36) return strings.launch.validationInstallments;
+      if (!Number.isInteger(current) || current < 1 || current > total) return strings.launch.validationInstallmentCurrent;
     }
 
     return null;
@@ -195,7 +197,7 @@ export function LaunchSheet() {
       setSuccess(true);
       closeTimerRef.current = setTimeout(closeSheet, 700);
     } catch {
-      setError('Erro ao salvar. Tente novamente.');
+      setError(strings.launch.saveError);
     } finally {
       setSaving(false);
     }
@@ -217,8 +219,13 @@ export function LaunchSheet() {
             <View style={[styles.handle, { backgroundColor: colors.border }]} />
 
             <View style={styles.header}>
-              <Text style={[styles.title, { color: colors.textPrimary }]}>Novo lancamento</Text>
-              <Pressable style={[styles.closeButton, { backgroundColor: colors.surfaceElevated }]} onPress={closeSheet}>
+              <Text style={[styles.title, { color: colors.textPrimary }]}>{strings.launch.newEntryTitle}</Text>
+              <Pressable
+                style={[styles.closeButton, { backgroundColor: colors.surfaceElevated }]}
+                accessibilityRole="button"
+                accessibilityLabel={strings.datePicker.close}
+                hitSlop={8}
+                onPress={closeSheet}>
                 <Text style={[styles.closeText, { color: colors.textSecondary }]}>x</Text>
               </Pressable>
             </View>
@@ -231,9 +238,11 @@ export function LaunchSheet() {
                   <Pressable
                     key={type}
                     style={[styles.toggleButton, { backgroundColor }]}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: active }}
                     onPress={() => switchType(type)}>
                     <Text style={[styles.toggleText, { color: active ? '#FFFFFF' : colors.textSecondary }]}>
-                      {type === 'gasto' ? '- Gasto' : '+ Receita'}
+                      {type === 'gasto' ? `- ${strings.launch.expense}` : `+ ${strings.launch.income}`}
                     </Text>
                   </Pressable>
                 );
@@ -249,7 +258,7 @@ export function LaunchSheet() {
                 <TextInput
                   value={formatCurrencyDisplay(form.amount)}
                   onChangeText={(text) => onField('amount', sanitizeDigits(text))}
-                  placeholder="0,00"
+                  placeholder={strings.launch.valuePlaceholder}
                   placeholderTextColor={`${accent}50`}
                   keyboardType="number-pad"
                   style={[styles.amountInput, { color: accent }]}
@@ -258,11 +267,11 @@ export function LaunchSheet() {
               </View>
 
               <View style={styles.fieldGroup}>
-                <Text style={[styles.label, { color: colors.textMuted }]}>DESCRICAO</Text>
+                <Text style={[styles.label, { color: colors.textMuted }]}>{strings.launch.description.toUpperCase()}</Text>
                 <TextInput
                   value={form.description}
                   onChangeText={(value) => onField('description', value)}
-                  placeholder="Ex: Mercado, freela, conta de luz"
+                  placeholder={strings.launch.descriptionPlaceholder}
                   placeholderTextColor={colors.textMuted}
                   style={[
                     styles.input,
@@ -273,19 +282,19 @@ export function LaunchSheet() {
               </View>
 
               <View style={styles.fieldGroup}>
-                <DatePickerField label="DATA" value={form.date} onChange={(value) => onField('date', value)} />
+                <DatePickerField label={strings.launch.date.toUpperCase()} value={form.date} onChange={(value) => onField('date', value)} />
               </View>
 
               {isExpense ? (
                 <View style={styles.fieldGroup}>
-                  <Text style={[styles.label, { color: colors.textMuted }]}>PARCELAMENTO</Text>
+                  <Text style={[styles.label, { color: colors.textMuted }]}>{strings.launch.installments.toUpperCase()}</Text>
                   <View style={styles.row}>
                     <View style={styles.halfField}>
-                      <Text style={[styles.sublabel, { color: colors.textMuted }]}>Total de parcelas</Text>
+                      <Text style={[styles.sublabel, { color: colors.textMuted }]}>{strings.launch.installments}</Text>
                       <TextInput
                         value={form.installmentTotal}
                         onChangeText={(value) => onField('installmentTotal', sanitizeDigits(value))}
-                        placeholder="1"
+                        placeholder={strings.launch.installmentsPlaceholder}
                         placeholderTextColor={colors.textMuted}
                         keyboardType="number-pad"
                         style={[
@@ -295,11 +304,11 @@ export function LaunchSheet() {
                       />
                     </View>
                     <View style={styles.halfField}>
-                      <Text style={[styles.sublabel, { color: colors.textMuted }]}>Parcela atual</Text>
+                      <Text style={[styles.sublabel, { color: colors.textMuted }]}>{strings.launch.installmentCurrent}</Text>
                       <TextInput
                         value={form.installmentCurrent}
                         onChangeText={(value) => onField('installmentCurrent', sanitizeDigits(value))}
-                        placeholder="1"
+                        placeholder={strings.launch.installmentCurrentPlaceholder}
                         placeholderTextColor={colors.textMuted}
                         keyboardType="number-pad"
                         style={[
@@ -311,14 +320,14 @@ export function LaunchSheet() {
                   </View>
                   {Number(form.installmentTotal) > 1 ? (
                     <Text style={[styles.hint, { color: colors.textMuted }]}>
-                      As parcelas restantes serao criadas automaticamente.
+                      {strings.launch.installmentsAutoHint}
                     </Text>
                   ) : null}
                 </View>
               ) : null}
 
               <View style={styles.fieldGroup}>
-                <Text style={[styles.label, { color: colors.textMuted }]}>CATEGORIA</Text>
+                <Text style={[styles.label, { color: colors.textMuted }]}>{strings.launch.category.toUpperCase()}</Text>
                 <View style={styles.chips}>
                   {categoryOptions.map((category) => {
                     const active = form.categoryId === category.id;
@@ -332,6 +341,8 @@ export function LaunchSheet() {
                             borderColor: active ? accent : colors.border,
                           },
                         ]}
+                        accessibilityRole="button"
+                        accessibilityState={{ selected: active }}
                         onPress={() => onField('categoryId', category.id)}>
                         <Text style={[styles.chipText, { color: active ? '#FFFFFF' : colors.textSecondary }]}>
                           {category.name}
@@ -349,7 +360,7 @@ export function LaunchSheet() {
               ) : null}
               {success ? (
                 <View style={[styles.feedback, { backgroundColor: `${colors.income}15`, borderColor: `${colors.income}40` }]}>
-                  <Text style={[styles.feedbackText, { color: colors.income }]}>Lancamento salvo com sucesso.</Text>
+                  <Text style={[styles.feedbackText, { color: colors.income }]}>{strings.launch.saveSuccessEntry}</Text>
                 </View>
               ) : null}
 
@@ -358,7 +369,7 @@ export function LaunchSheet() {
                 onPress={onSave}
                 disabled={saving || success}>
                 <Text style={styles.saveText}>
-                  {saving ? 'Salvando...' : success ? 'Salvo' : 'Salvar lancamento'}
+                  {saving ? strings.launch.saving : success ? strings.launch.saved : strings.launch.save}
                 </Text>
               </Pressable>
             </ScrollView>
@@ -384,10 +395,10 @@ function createStyles(colors: ReturnType<typeof useAppTheme>['colors'], isDark: 
     handle: { width: 40, height: 4, borderRadius: 2, alignSelf: 'center', marginBottom: 18 },
     header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 },
     title: { fontSize: 19, fontWeight: '800' },
-    closeButton: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
+    closeButton: { minWidth: 44, minHeight: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
     closeText: { fontSize: 13, fontWeight: '700' },
     toggle: { flexDirection: 'row', borderRadius: 14, borderWidth: 1, padding: 3, marginBottom: 18 },
-    toggleButton: { flex: 1, paddingVertical: 10, borderRadius: 11, alignItems: 'center' },
+    toggleButton: { flex: 1, minHeight: 44, paddingVertical: 10, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
     toggleText: { fontSize: 14, fontWeight: '700' },
     scroll: { gap: 18, paddingBottom: 8 },
     amountBox: {
@@ -402,7 +413,7 @@ function createStyles(colors: ReturnType<typeof useAppTheme>['colors'], isDark: 
     amountPrefix: { fontSize: 24, fontWeight: '800' },
     amountInput: { flex: 1, fontSize: 40, fontWeight: '800', paddingVertical: 14 },
     fieldGroup: { gap: 7 },
-    label: { fontSize: 11, fontWeight: '700' },
+    label: { fontSize: 12, fontWeight: '700' },
     sublabel: { fontSize: 12, fontWeight: '500' },
     input: {
       borderRadius: 13,
@@ -416,7 +427,7 @@ function createStyles(colors: ReturnType<typeof useAppTheme>['colors'], isDark: 
     halfField: { flex: 1, gap: 5 },
     hint: { fontSize: 11, lineHeight: 16 },
     chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-    chip: { borderRadius: 999, borderWidth: 1, paddingHorizontal: 13, paddingVertical: 8 },
+    chip: { minHeight: 44, borderRadius: 999, borderWidth: 1, paddingHorizontal: 13, paddingVertical: 8, justifyContent: 'center' },
     chipText: { fontSize: 13, fontWeight: '600' },
     feedback: { borderRadius: 12, borderWidth: 1, padding: 13 },
     feedbackText: { fontSize: 13, fontWeight: '500' },

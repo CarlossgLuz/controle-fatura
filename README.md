@@ -12,6 +12,7 @@ O projeto foi pensado para uso local-first:
 - compras no cartao com ciclo de fatura
 - metas e recorrencias mensais
 - dashboard inicial e tela de insights
+- suporte de interface para `pt-BR`, `en` e `es`
 - persistencia local com `expo-sqlite` e `expo-sqlite/kv-store`
 
 ## Stack
@@ -31,6 +32,7 @@ constants/            tema e tokens
 data/                 persistencia local e agregacoes
 domain/               regras de negocio
 hooks/                hooks de UI e preferencias
+locales/              contrato e textos traduzidos da interface
 providers/            providers globais
 utils/                utilitarios
 ```
@@ -74,6 +76,8 @@ npm run web
 npm run android
 npm run ios
 npm run lint
+npm run typecheck
+npm run web:export
 ```
 
 ## Funcionalidades Principais
@@ -85,9 +89,13 @@ npm run lint
 - planejamento mensal com meta, configuracao de cartao e recorrencias
 - insights por categoria, uso de pagamento e historico mensal
 
+## Idioma e Formatos
+
+Toda string visivel para usuario deve passar por `locales/translations.ts` e ser consumida com `useI18n`. O mesmo vale para moeda, percentual e data: use `formatCurrency`, `formatPercent`, `formatIsoDate` e `formatMonthLabel` em vez de `toLocaleString('pt-BR')` dentro das telas.
+
 ## Persistencia
 
-Os dados sao armazenados localmente no dispositivo. Isso favorece simplicidade e privacidade local, mas tambem significa que o projeto ainda exige endurecimento adicional antes de um deploy de producao mais sensivel.
+Os dados sao armazenados localmente no dispositivo. No nativo, compras usam SQLite; no Web, o app usa uma implementacao local em `localStorage` para evitar falhas do SQLite/WASM no navegador. Isso favorece simplicidade e privacidade local, mas tambem significa que o projeto ainda exige endurecimento adicional antes de um deploy de producao mais sensivel.
 
 ## Open Source
 

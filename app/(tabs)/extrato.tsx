@@ -18,27 +18,16 @@ import {
 import type { MonthlyMovement } from '@/data/local/finance-month-aggregation';
 import {
   currentMonthKey,
-  formatMonthKeyLabel,
   loadMonthExtract,
   shiftMonthKey,
   type MonthExtract,
 } from '@/data/local/extrato-loader';
 import { excluirCompra } from '@/data/sqlite';
 import { useAppTheme } from '@/hooks/use-app-theme';
+import { useI18n } from '@/hooks/use-i18n';
 import { useLaunchSheet } from '@/providers/launch-sheet-context';
 
 type FilterKind = 'all' | 'income' | 'expense';
-
-function formatDateShort(isoDate: string): string {
-  const [y, m, d] = isoDate.split('-').map(Number);
-  if (!y || !m || !d) return isoDate;
-  const date = new Date(Date.UTC(y, m - 1, d));
-  return date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', timeZone: 'UTC' });
-}
-
-function formatBRL(value: number) {
-  return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-}
 
 function groupByDate(movements: MonthlyMovement[]): { date: string; items: MonthlyMovement[] }[] {
   const map = new Map<string, MonthlyMovement[]>();
@@ -54,6 +43,7 @@ function groupByDate(movements: MonthlyMovement[]): { date: string; items: Month
 
 export default function ExtratoScreen() {
   const { colors, mode } = useAppTheme();
+  const { strings, formatCurrency, formatIsoDate, formatMonthLabel } = useI18n();
   const { openSheet, revision } = useLaunchSheet();
   const insets = useSafeAreaInsets();
   const isDark = mode === 'dark';
@@ -79,11 +69,11 @@ export default function ExtratoScreen() {
       const data = await loadMonthExtract(monthKey);
       setExtract(data);
     } catch {
-      setError('Erro ao carregar extrato.');
+      setError(strings.extract.loadingError);
     } finally {
       setLoading(false);
     }
-  }, [monthKey]);
+  }, [monthKey, strings.extract.loadingError]);
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
@@ -103,14 +93,14 @@ export default function ExtratoScreen() {
   const confirmRemove = (item: MonthlyMovement) => {
     if (item.kind !== 'expense' || !item.entityId) return;
     Alert.alert(
-      'Remover lancamento',
+      strings.extract.removeTitle,
       item.installment
-        ? `Remover parcela ${item.installment.current}/${item.installment.total} e as seguintes?`
-        : 'Remover este lancamento?',
+        ? strings.extract.removeInstallmentDescription(item.installment.current, item.installment.total)
+        : strings.extract.removeDescription,
       [
-        { text: 'Cancelar', style: 'cancel' },
+        { text: strings.common.cancel, style: 'cancel' },
         {
-          text: 'Remover',
+          text: strings.common.remove,
           style: 'destructive',
           onPress: async () => {
             try {
@@ -126,7 +116,7 @@ export default function ExtratoScreen() {
               }
               await load();
             } catch {
-              setError('Erro ao remover.');
+              setError(strings.extract.removeError);
             }
           },
         },
@@ -143,30 +133,42 @@ export default function ExtratoScreen() {
   const grouped = groupByDate(filtered);
 
   const filters: { key: FilterKind; label: string }[] = [
-    { key: 'all', label: 'Todos' },
-    { key: 'income', label: 'Receitas' },
-    { key: 'expense', label: 'Gastos' },
+    { key: 'all', label: strings.extract.all },
+    { key: 'income', label: strings.extract.income },
+    { key: 'expense', label: strings.extract.expense },
   ];
+
+  const monthDate = (() => {
+    const [year, month] = monthKey.split('-').map(Number);
+    return new Date(year || new Date().getFullYear(), (month || 1) - 1, 1);
+  })();
 
   return (
     <SafeAreaView style={styles.screen} edges={['top']}>
       <View style={[styles.topHeader, { borderBottomColor: colors.border }]}>
-        <Text style={[styles.screenTitle, { color: colors.textPrimary }]}>Extrato</Text>
+        <Text style={[styles.screenTitle, { color: colors.textPrimary }]}>{strings.extract.title}</Text>
         <Pressable
           style={[styles.addBtn, { backgroundColor: colors.primary }]}
+          accessibilityRole="button"
+          accessibilityLabel={strings.extract.newEntry}
+          hitSlop={8}
           onPress={() => openLaunch('gasto')}>
           <IconSymbol name="plus" size={16} color="#FFFFFF" />
         </Pressable>
       </View>
 
       <View style={[styles.monthNav, { borderBottomColor: colors.border }]}>
-        <Pressable style={styles.monthArrow} onPress={goToPrev}>
+        <Pressable style={styles.monthArrow} accessibilityRole="button" hitSlop={8} onPress={goToPrev}>
           <IconSymbol name="chevron.left" size={18} color={colors.textSecondary} />
         </Pressable>
         <Text style={[styles.monthLabel, { color: colors.textPrimary }]}>
-          {formatMonthKeyLabel(monthKey)}
+          {formatMonthLabel(monthDate)}
         </Text>
-        <Pressable style={styles.monthArrow} onPress={goToNext} disabled={isCurrentMonth}>
+        <Pressable
+          style={styles.monthArrow}
+          accessibilityState={{ disabled: isCurrentMonth }}
+          onPress={goToNext}
+          disabled={isCurrentMonth}>
           <IconSymbol
             name="chevron.right"
             size={18}
@@ -178,23 +180,23 @@ export default function ExtratoScreen() {
       {extract ? (
         <View style={[styles.summaryBar, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
           <View style={styles.summaryItem}>
-            <Text style={[styles.summaryLbl, { color: colors.textMuted }]}>Receitas</Text>
+            <Text style={[styles.summaryLbl, { color: colors.textMuted }]}>{strings.extract.income}</Text>
             <Text style={[styles.summaryVal, { color: colors.income }]}>
-              {formatBRL(extract.summary.incomeTotal)}
+              {formatCurrency(extract.summary.incomeTotal)}
             </Text>
           </View>
           <View style={[styles.summaryDivider, { backgroundColor: colors.border }]} />
           <View style={styles.summaryItem}>
-            <Text style={[styles.summaryLbl, { color: colors.textMuted }]}>Gastos</Text>
+            <Text style={[styles.summaryLbl, { color: colors.textMuted }]}>{strings.extract.expense}</Text>
             <Text style={[styles.summaryVal, { color: colors.expense }]}>
-              {formatBRL(extract.summary.expenseTotal)}
+              {formatCurrency(extract.summary.expenseTotal)}
             </Text>
           </View>
           <View style={[styles.summaryDivider, { backgroundColor: colors.border }]} />
           <View style={styles.summaryItem}>
-            <Text style={[styles.summaryLbl, { color: colors.textMuted }]}>Saldo</Text>
+            <Text style={[styles.summaryLbl, { color: colors.textMuted }]}>{strings.extract.balance}</Text>
             <Text style={[styles.summaryVal, { color: extract.summary.balance >= 0 ? colors.income : colors.expense }]}>
-              {formatBRL(extract.summary.balance)}
+              {formatCurrency(extract.summary.balance)}
             </Text>
           </View>
         </View>
@@ -213,6 +215,8 @@ export default function ExtratoScreen() {
                   borderColor: active ? colors.primary : colors.border,
                 },
               ]}
+              accessibilityRole="button"
+              accessibilityState={{ selected: active }}
               onPress={() => setFilter(f.key)}>
               <Text style={[styles.filterChipText, { color: active ? '#FFFFFF' : colors.textSecondary }]}>
                 {f.label}
@@ -222,7 +226,7 @@ export default function ExtratoScreen() {
         })}
         {extract ? (
           <Text style={[styles.countLabel, { color: colors.textMuted }]}>
-            {filtered.length} {filtered.length === 1 ? 'item' : 'itens'}
+            {filtered.length} {filtered.length === 1 ? strings.extract.itemSingular : strings.extract.itemPlural}
           </Text>
         ) : null}
       </View>
@@ -241,23 +245,23 @@ export default function ExtratoScreen() {
           <View style={styles.centerState}>
             <Text style={[styles.errorText, { color: colors.expense }]}>{error}</Text>
             <Pressable onPress={load}>
-              <Text style={[styles.retryText, { color: colors.primary }]}>Tentar novamente</Text>
+              <Text style={[styles.retryText, { color: colors.primary }]}>{strings.common.tryAgain}</Text>
             </Pressable>
           </View>
         ) : grouped.length === 0 ? (
           <View style={styles.centerState}>
             <IconSymbol name="tray.fill" size={40} color={colors.border} />
-            <Text style={[styles.emptyTitle, { color: colors.textSecondary }]}>Nenhum lancamento</Text>
+            <Text style={[styles.emptyTitle, { color: colors.textSecondary }]}>{strings.extract.emptyTitle}</Text>
             <Text style={[styles.emptyDesc, { color: colors.textMuted }]}>
               {filter !== 'all'
-                ? 'Tente mudar o filtro acima'
-                : 'Adicione lancamentos com o botao +'}
+                ? strings.extract.emptyFilteredDescription
+                : strings.extract.emptyDescription}
             </Text>
             {filter === 'all' ? (
               <Pressable
                 style={[styles.addFirstBtn, { backgroundColor: colors.primary }]}
                 onPress={() => openLaunch('gasto')}>
-                <Text style={styles.addFirstBtnText}>Novo lancamento</Text>
+                <Text style={styles.addFirstBtnText}>{strings.extract.newEntry}</Text>
               </Pressable>
             ) : null}
           </View>
@@ -266,7 +270,7 @@ export default function ExtratoScreen() {
             <View key={date} style={styles.dateGroup}>
               <View style={styles.dateSep}>
                 <Text style={[styles.dateLabel, { color: colors.textMuted }]}>
-                  {formatDateShort(date)}
+                  {formatIsoDate(date)}
                 </Text>
                 <View style={[styles.dateLine, { backgroundColor: colors.border }]} />
               </View>
@@ -277,9 +281,9 @@ export default function ExtratoScreen() {
                 const meta = item.installment
                   ? `${item.installment.current}/${item.installment.total}`
                   : item.source === 'card'
-                    ? 'Cartao'
+                    ? strings.extract.card
                     : item.source === 'recurring'
-                      ? 'Recorrente'
+                      ? strings.extract.recurring
                       : null;
 
                 return (
@@ -313,11 +317,14 @@ export default function ExtratoScreen() {
                       ) : null}
                     </View>
                     <Text style={[styles.txAmt, { color: amtColor }]}>
-                      {isIncome ? '+' : '-'} {formatBRL(item.amount)}
+                      {isIncome ? '+' : '-'} {formatCurrency(item.amount)}
                     </Text>
                     {item.kind === 'expense' && item.entityId ? (
                       <Pressable
                         style={[styles.deleteBtn, { borderColor: `${colors.expense}30` }]}
+                        accessibilityRole="button"
+                        accessibilityLabel={strings.common.remove}
+                        hitSlop={8}
                         onPress={() => confirmRemove(item)}>
                         <IconSymbol name="trash.fill" size={13} color={colors.expense} />
                       </Pressable>
@@ -346,9 +353,9 @@ function createStyles(colors: ReturnType<typeof useAppTheme>['colors'], isDark: 
     },
     screenTitle: { fontSize: 22, fontWeight: '800' },
     addBtn: {
-      width: 34,
-      height: 34,
-      borderRadius: 17,
+      minWidth: 44,
+      minHeight: 44,
+      borderRadius: 22,
       alignItems: 'center',
       justifyContent: 'center',
     },
@@ -360,7 +367,7 @@ function createStyles(colors: ReturnType<typeof useAppTheme>['colors'], isDark: 
       paddingVertical: 12,
       borderBottomWidth: 1,
     },
-    monthArrow: { padding: 4 },
+    monthArrow: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
     monthLabel: { fontSize: 16, fontWeight: '700', textTransform: 'capitalize' },
     summaryBar: {
       flexDirection: 'row',
@@ -384,7 +391,9 @@ function createStyles(colors: ReturnType<typeof useAppTheme>['colors'], isDark: 
       borderRadius: 999,
       borderWidth: 1,
       paddingHorizontal: 12,
-      paddingVertical: 6,
+      paddingVertical: 10,
+      minHeight: 44,
+      justifyContent: 'center',
     },
     filterChipText: { fontSize: 13, fontWeight: '600' },
     countLabel: { marginLeft: 'auto', fontSize: 12 },
@@ -416,9 +425,9 @@ function createStyles(colors: ReturnType<typeof useAppTheme>['colors'], isDark: 
     txMeta: { fontSize: 12, marginTop: 2 },
     txAmt: { fontSize: 14, fontWeight: '700' },
     deleteBtn: {
-      width: 32,
-      height: 32,
-      borderRadius: 8,
+      minWidth: 44,
+      minHeight: 44,
+      borderRadius: 12,
       borderWidth: 1,
       alignItems: 'center',
       justifyContent: 'center',

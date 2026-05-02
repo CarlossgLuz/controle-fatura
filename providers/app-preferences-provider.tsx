@@ -22,6 +22,8 @@ interface AppPreferencesProviderProps {
   children: ReactNode;
   initialLanguage: AppLanguage;
   initialThemePreference: ThemePreference;
+  onLanguageChange?: (value: AppLanguage) => void;
+  onThemePreferenceChange?: (value: ThemePreference) => void;
 }
 
 interface AppPreferencesState extends AppPreferencesContextValue {
@@ -37,6 +39,8 @@ export function AppPreferencesProvider({
   children,
   initialLanguage,
   initialThemePreference,
+  onLanguageChange,
+  onThemePreferenceChange,
 }: AppPreferencesProviderProps) {
   const [language, setLanguage] = useState<AppLanguage>(initialLanguage);
   const [themePreference, setTheme] = useState<ThemePreference>(initialThemePreference);
@@ -51,21 +55,23 @@ export function AppPreferencesProvider({
 
   const setLanguagePreference = useCallback(async (value: AppLanguage) => {
     setLanguage(value);
+    onLanguageChange?.(value);
     try {
       await persistLanguagePreference(value);
     } catch (error) {
       devWarn('Erro ao persistir idioma:', error);
     }
-  }, []);
+  }, [onLanguageChange]);
 
   const setThemePreference = useCallback(async (value: ThemePreference) => {
     setTheme(value);
+    onThemePreferenceChange?.(value);
     try {
       await persistThemePreference(value);
     } catch (error) {
       devWarn('Erro ao persistir tema:', error);
     }
-  }, []);
+  }, [onThemePreferenceChange]);
 
   const value = useMemo<AppPreferencesContextValue>(
     () => ({

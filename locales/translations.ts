@@ -6,6 +6,7 @@ export interface AppStrings {
     tryAgain: string;
     cancel: string;
     remove: string;
+    save: string;
     loading: string;
     appName: string;
     localFirstHint: string;
@@ -15,6 +16,7 @@ export interface AppStrings {
   };
   tabs: {
     home: string;
+    extract: string;
     launch: string;
     planning: string;
     insights: string;
@@ -76,6 +78,127 @@ export interface AppStrings {
     removeSuccess: string;
     removeError: string;
     refreshData: string;
+    positive: string;
+    negative: string;
+    seeExtract: string;
+    addFirstEntry: string;
+  };
+  extract: {
+    title: string;
+    all: string;
+    income: string;
+    expense: string;
+    balance: string;
+    itemSingular: string;
+    itemPlural: string;
+    card: string;
+    recurring: string;
+    loadingError: string;
+    removeTitle: string;
+    removeDescription: string;
+    removeInstallmentDescription: (current: number, total: number) => string;
+    removeError: string;
+    emptyTitle: string;
+    emptyFilteredDescription: string;
+    emptyDescription: string;
+    newEntry: string;
+  };
+  planning: {
+    eyebrow: string;
+    title: string;
+    subtitle: string;
+    loading: string;
+    loadError: string;
+    budgetTitle: string;
+    budgetSubtitle: string;
+    budgetEmpty: string;
+    budgetSpent: (value: string) => string;
+    budgetPercent: (value: number) => string;
+    budgetValue: string;
+    budgetSave: string;
+    budgetClear: string;
+    budgetInvalid: string;
+    budgetSaveSuccess: string;
+    budgetSaveError: string;
+    budgetClearSuccess: string;
+    budgetClearError: string;
+    stateNoGoal: string;
+    stateGood: string;
+    stateWarning: string;
+    stateDanger: string;
+    cardTitle: string;
+    cardSubtitle: string;
+    cardName: string;
+    cardClosingDay: string;
+    cardDueDay: string;
+    cardClosingPlaceholder: string;
+    cardDuePlaceholder: string;
+    cardSave: string;
+    cardRestore: string;
+    cardSaveSuccess: string;
+    cardSaveError: string;
+    cardRestoreSuccess: string;
+    cardRestoreError: string;
+    recurringTitle: string;
+    recurringSubtitle: string;
+    recurringAdd: string;
+    recurringEmptyTitle: string;
+    recurringEmptyDescription: string;
+    recurringCreated: string;
+    recurringCreateError: string;
+    recurringActivated: string;
+    recurringDeactivated: string;
+    recurringUpdateError: string;
+    recurringDeleteTitle: string;
+    recurringDeleteMessage: (description: string) => string;
+    recurringDeleted: string;
+    recurringDeleteError: string;
+    recurringDescriptionRequired: string;
+    recurringAmountInvalid: string;
+    recurringDayInvalid: string;
+    recurringCategoryInvalid: string;
+    categorySection: string;
+    categoryEmptyTitle: string;
+    categoryEmptyDescription: string;
+    categoryCreateEmptyTitle: string;
+    categoryCreateEmptyDescription: string;
+    categoryManagementSubtitle: string;
+    categoryHidden: string;
+    categoryReactivated: string;
+    categoryUpdateError: string;
+    categorySystemDeleteError: string;
+    categoryDeleteTitle: string;
+    categoryDeleteMessage: (name: string) => string;
+    categoryDeleted: string;
+    categoryDeleteError: string;
+    income: string;
+    fixed: string;
+    expense: string;
+    incomeMeta: string;
+    expenseMeta: string;
+    generalMeta: string;
+    fixedMeta: string;
+    variableMeta: string;
+    systemMeta: string;
+    customMeta: string;
+    description: string;
+    amount: string;
+    dayOfMonth: string;
+    monthlyDay: (day: number) => string;
+    inactive: string;
+    activate: string;
+    deactivate: string;
+    hide: string;
+    delete: string;
+  };
+  categoryQuickAdd: {
+    trigger: string;
+    title: string;
+    namePlaceholder: string;
+    customTitle: string;
+    removeError: string;
+    nameRequired: string;
+    saveError: string;
   };
   launch: {
     eyebrow: string;
@@ -118,6 +241,8 @@ export interface AppStrings {
     saveSuccessFixed: string;
     saveSuccessEntry: string;
     saveSuccessInstallments: (count: number) => string;
+    saved: string;
+    installmentsAutoHint: string;
     saveError: string;
   };
   insights: {
@@ -187,6 +312,7 @@ export const translations: Record<AppLanguage, AppStrings> = {
       tryAgain: 'Tentar novamente',
       cancel: 'Cancelar',
       remove: 'Remover',
+      save: 'Salvar',
       loading: 'Carregando...',
       appName: 'Clarium',
       localFirstHint: 'Seus dados ficam no seu dispositivo.',
@@ -196,6 +322,7 @@ export const translations: Record<AppLanguage, AppStrings> = {
     },
     tabs: {
       home: 'Início',
+      extract: 'Extrato',
       launch: 'Lançar',
       planning: 'Planejamento',
       insights: 'Insights',
@@ -271,6 +398,128 @@ export const translations: Record<AppLanguage, AppStrings> = {
       removeSuccess: 'Movimentação removida.',
       removeError: 'Não foi possível remover a movimentação.',
       refreshData: 'Atualizar dados',
+      positive: 'positivo',
+      negative: 'negativo',
+      seeExtract: 'Ver extrato',
+      addFirstEntry: 'Adicionar primeiro lançamento',
+    },
+    extract: {
+      title: 'Extrato',
+      all: 'Todos',
+      income: 'Receitas',
+      expense: 'Gastos',
+      balance: 'Saldo',
+      itemSingular: 'item',
+      itemPlural: 'itens',
+      card: 'Cartão',
+      recurring: 'Recorrente',
+      loadingError: 'Erro ao carregar extrato.',
+      removeTitle: 'Remover lançamento',
+      removeDescription: 'Remover este lançamento?',
+      removeInstallmentDescription: (current: number, total: number) =>
+        `Remover parcela ${current}/${total} e as seguintes?`,
+      removeError: 'Erro ao remover.',
+      emptyTitle: 'Nenhum lançamento',
+      emptyFilteredDescription: 'Tente mudar o filtro acima',
+      emptyDescription: 'Adicione lançamentos com o botão +',
+      newEntry: 'Novo lançamento',
+    },
+    planning: {
+      eyebrow: 'Seu mês',
+      title: 'Planejamento',
+      subtitle: 'Meta, cartão e recorrentes do mês.',
+      loading: 'Carregando planejamento...',
+      loadError: 'Não foi possível carregar o planejamento.',
+      budgetTitle: 'Meta mensal',
+      budgetSubtitle: 'Seu limite para este mês',
+      budgetEmpty: 'Defina sua meta mensal',
+      budgetSpent: (value: string) => `Gasto no mês: ${value}`,
+      budgetPercent: (value: number) => `${value}% da meta`,
+      budgetValue: 'Valor da meta',
+      budgetSave: 'Salvar meta',
+      budgetClear: 'Limpar',
+      budgetInvalid: 'Informe uma meta mensal válida.',
+      budgetSaveSuccess: 'Meta mensal salva.',
+      budgetSaveError: 'Não foi possível salvar a meta.',
+      budgetClearSuccess: 'Meta mensal removida.',
+      budgetClearError: 'Não foi possível remover a meta.',
+      stateNoGoal: 'Sem meta',
+      stateGood: 'Dentro da meta',
+      stateWarning: 'Atenção',
+      stateDanger: 'Acima da meta',
+      cardTitle: 'Cartão',
+      cardSubtitle: 'Fechamento e vencimento',
+      cardName: 'Nome do cartão',
+      cardClosingDay: 'Dia de fechamento',
+      cardDueDay: 'Dia de vencimento',
+      cardClosingPlaceholder: 'Fechamento',
+      cardDuePlaceholder: 'Vencimento',
+      cardSave: 'Salvar cartão',
+      cardRestore: 'Restaurar',
+      cardSaveSuccess: 'Configuração do cartão salva.',
+      cardSaveError: 'Não foi possível salvar as configurações do cartão.',
+      cardRestoreSuccess: 'Cartão restaurado para padrão.',
+      cardRestoreError: 'Não foi possível restaurar o cartão.',
+      recurringTitle: 'Recorrentes',
+      recurringSubtitle: 'Cadastre e acompanhe',
+      recurringAdd: 'Adicionar recorrência',
+      recurringEmptyTitle: 'Sem recorrentes',
+      recurringEmptyDescription: 'Cadastre uma recorrência para começar.',
+      recurringCreated: 'Recorrência criada.',
+      recurringCreateError: 'Não foi possível criar a recorrência.',
+      recurringActivated: 'Recorrência ativada.',
+      recurringDeactivated: 'Recorrência desativada.',
+      recurringUpdateError: 'Não foi possível atualizar a recorrência.',
+      recurringDeleteTitle: 'Excluir recorrência',
+      recurringDeleteMessage: (description: string) => `Deseja excluir "${description}"?`,
+      recurringDeleted: 'Recorrência excluída.',
+      recurringDeleteError: 'Não foi possível excluir a recorrência.',
+      recurringDescriptionRequired: 'Descrição da recorrência é obrigatória.',
+      recurringAmountInvalid: 'Informe um valor válido para a recorrência.',
+      recurringDayInvalid: 'Dia do mês inválido para recorrência.',
+      recurringCategoryInvalid: 'Selecione uma categoria válida para esta recorrência.',
+      categorySection: 'Categorias',
+      categoryEmptyTitle: 'Sem categorias',
+      categoryEmptyDescription: 'Crie categorias para personalizar o fluxo.',
+      categoryCreateEmptyTitle: 'Sem categorias',
+      categoryCreateEmptyDescription: 'Crie uma categoria para continuar.',
+      categoryManagementSubtitle: 'Organize o que aparece no app',
+      categoryHidden: 'Categoria ocultada.',
+      categoryReactivated: 'Categoria reativada.',
+      categoryUpdateError: 'Não foi possível atualizar a categoria.',
+      categorySystemDeleteError: 'Categorias padrão não podem ser excluídas. Use ocultar.',
+      categoryDeleteTitle: 'Excluir categoria',
+      categoryDeleteMessage: (name: string) => `Deseja excluir "${name}"?`,
+      categoryDeleted: 'Categoria removida.',
+      categoryDeleteError: 'Não foi possível excluir a categoria.',
+      income: 'Receita',
+      fixed: 'Fixo',
+      expense: 'Gasto',
+      incomeMeta: 'Entrada',
+      expenseMeta: 'Saída',
+      generalMeta: 'geral',
+      fixedMeta: 'fixo',
+      variableMeta: 'variável',
+      systemMeta: 'padrão',
+      customMeta: 'custom',
+      description: 'Descrição',
+      amount: 'Valor',
+      dayOfMonth: 'Dia do mês',
+      monthlyDay: (day: number) => `Mensal · Dia ${day}`,
+      inactive: 'Desativada',
+      activate: 'Ativar',
+      deactivate: 'Desativar',
+      hide: 'Ocultar',
+      delete: 'Excluir',
+    },
+    categoryQuickAdd: {
+      trigger: 'Criar categoria',
+      title: 'Nova categoria',
+      namePlaceholder: 'Nome da categoria',
+      customTitle: 'Categorias customizadas',
+      removeError: 'Não foi possível remover.',
+      nameRequired: 'Nome é obrigatório.',
+      saveError: 'Não foi possível salvar agora.',
     },
     launch: {
       eyebrow: 'Novo lançamento',
@@ -314,6 +563,8 @@ export const translations: Record<AppLanguage, AppStrings> = {
       saveSuccessFixed: 'Fixo salvo no Planejamento.',
       saveSuccessEntry: 'Lançamento salvo.',
       saveSuccessInstallments: (count: number) => `${count} parcelas salvas.`,
+      saved: 'Salvo',
+      installmentsAutoHint: 'As parcelas restantes serão criadas automaticamente.',
       saveError: 'Não foi possível salvar agora.',
     },
     insights: {
@@ -381,6 +632,7 @@ export const translations: Record<AppLanguage, AppStrings> = {
       tryAgain: 'Try again',
       cancel: 'Cancel',
       remove: 'Remove',
+      save: 'Save',
       loading: 'Loading...',
       appName: 'Clarium',
       localFirstHint: 'Your data stays on your device.',
@@ -390,6 +642,7 @@ export const translations: Record<AppLanguage, AppStrings> = {
     },
     tabs: {
       home: 'Home',
+      extract: 'Extract',
       launch: 'Add',
       planning: 'Planning',
       insights: 'Insights',
@@ -460,6 +713,128 @@ export const translations: Record<AppLanguage, AppStrings> = {
       removeSuccess: 'Movement removed.',
       removeError: 'Could not remove the movement.',
       refreshData: 'Refresh data',
+      positive: 'positive',
+      negative: 'negative',
+      seeExtract: 'View extract',
+      addFirstEntry: 'Add first entry',
+    },
+    extract: {
+      title: 'Extract',
+      all: 'All',
+      income: 'Income',
+      expense: 'Expenses',
+      balance: 'Balance',
+      itemSingular: 'item',
+      itemPlural: 'items',
+      card: 'Card',
+      recurring: 'Recurring',
+      loadingError: 'Could not load extract.',
+      removeTitle: 'Remove entry',
+      removeDescription: 'Remove this entry?',
+      removeInstallmentDescription: (current: number, total: number) =>
+        `Remove installment ${current}/${total} and the following ones?`,
+      removeError: 'Could not remove.',
+      emptyTitle: 'No entries',
+      emptyFilteredDescription: 'Try changing the filter above',
+      emptyDescription: 'Add entries with the + button',
+      newEntry: 'New entry',
+    },
+    planning: {
+      eyebrow: 'Your month',
+      title: 'Planning',
+      subtitle: 'Goal, card, and recurring entries for the month.',
+      loading: 'Loading planning...',
+      loadError: 'Could not load planning.',
+      budgetTitle: 'Monthly goal',
+      budgetSubtitle: 'Your limit for this month',
+      budgetEmpty: 'Set your monthly goal',
+      budgetSpent: (value: string) => `Spent this month: ${value}`,
+      budgetPercent: (value: number) => `${value}% of goal`,
+      budgetValue: 'Goal amount',
+      budgetSave: 'Save goal',
+      budgetClear: 'Clear',
+      budgetInvalid: 'Enter a valid monthly goal.',
+      budgetSaveSuccess: 'Monthly goal saved.',
+      budgetSaveError: 'Could not save the goal.',
+      budgetClearSuccess: 'Monthly goal removed.',
+      budgetClearError: 'Could not remove the goal.',
+      stateNoGoal: 'No goal',
+      stateGood: 'On track',
+      stateWarning: 'Attention',
+      stateDanger: 'Over goal',
+      cardTitle: 'Card',
+      cardSubtitle: 'Closing and due dates',
+      cardName: 'Card name',
+      cardClosingDay: 'Closing day',
+      cardDueDay: 'Due day',
+      cardClosingPlaceholder: 'Closing',
+      cardDuePlaceholder: 'Due',
+      cardSave: 'Save card',
+      cardRestore: 'Restore',
+      cardSaveSuccess: 'Card settings saved.',
+      cardSaveError: 'Could not save card settings.',
+      cardRestoreSuccess: 'Card restored to default.',
+      cardRestoreError: 'Could not restore the card.',
+      recurringTitle: 'Recurring',
+      recurringSubtitle: 'Create and track',
+      recurringAdd: 'Add recurring entry',
+      recurringEmptyTitle: 'No recurring entries',
+      recurringEmptyDescription: 'Create a recurring entry to start.',
+      recurringCreated: 'Recurring entry created.',
+      recurringCreateError: 'Could not create the recurring entry.',
+      recurringActivated: 'Recurring entry activated.',
+      recurringDeactivated: 'Recurring entry deactivated.',
+      recurringUpdateError: 'Could not update the recurring entry.',
+      recurringDeleteTitle: 'Delete recurring entry',
+      recurringDeleteMessage: (description: string) => `Delete "${description}"?`,
+      recurringDeleted: 'Recurring entry deleted.',
+      recurringDeleteError: 'Could not delete the recurring entry.',
+      recurringDescriptionRequired: 'Recurring description is required.',
+      recurringAmountInvalid: 'Enter a valid amount for the recurring entry.',
+      recurringDayInvalid: 'Invalid day of month for recurrence.',
+      recurringCategoryInvalid: 'Select a valid category for this recurrence.',
+      categorySection: 'Categories',
+      categoryEmptyTitle: 'No categories',
+      categoryEmptyDescription: 'Create categories to customize the flow.',
+      categoryCreateEmptyTitle: 'No categories',
+      categoryCreateEmptyDescription: 'Create a category to continue.',
+      categoryManagementSubtitle: 'Organize what appears in the app',
+      categoryHidden: 'Category hidden.',
+      categoryReactivated: 'Category reactivated.',
+      categoryUpdateError: 'Could not update the category.',
+      categorySystemDeleteError: 'Default categories cannot be deleted. Use hide.',
+      categoryDeleteTitle: 'Delete category',
+      categoryDeleteMessage: (name: string) => `Delete "${name}"?`,
+      categoryDeleted: 'Category removed.',
+      categoryDeleteError: 'Could not delete the category.',
+      income: 'Income',
+      fixed: 'Fixed',
+      expense: 'Expense',
+      incomeMeta: 'Income',
+      expenseMeta: 'Expense',
+      generalMeta: 'general',
+      fixedMeta: 'fixed',
+      variableMeta: 'variable',
+      systemMeta: 'default',
+      customMeta: 'custom',
+      description: 'Description',
+      amount: 'Amount',
+      dayOfMonth: 'Day of month',
+      monthlyDay: (day: number) => `Monthly · Day ${day}`,
+      inactive: 'Inactive',
+      activate: 'Activate',
+      deactivate: 'Deactivate',
+      hide: 'Hide',
+      delete: 'Delete',
+    },
+    categoryQuickAdd: {
+      trigger: 'Create category',
+      title: 'New category',
+      namePlaceholder: 'Category name',
+      customTitle: 'Custom categories',
+      removeError: 'Could not remove.',
+      nameRequired: 'Name is required.',
+      saveError: 'Could not save right now.',
     },
     launch: {
       eyebrow: 'New entry',
@@ -503,6 +878,8 @@ export const translations: Record<AppLanguage, AppStrings> = {
       saveSuccessFixed: 'Fixed expense saved in Planning.',
       saveSuccessEntry: 'Entry saved.',
       saveSuccessInstallments: (count: number) => `${count} installments saved.`,
+      saved: 'Saved',
+      installmentsAutoHint: 'The remaining installments will be created automatically.',
       saveError: 'Could not save right now.',
     },
     insights: {
@@ -570,6 +947,7 @@ export const translations: Record<AppLanguage, AppStrings> = {
       tryAgain: 'Intentar de nuevo',
       cancel: 'Cancelar',
       remove: 'Eliminar',
+      save: 'Guardar',
       loading: 'Cargando...',
       appName: 'Clarium',
       localFirstHint: 'Tus datos permanecen en tu dispositivo.',
@@ -579,6 +957,7 @@ export const translations: Record<AppLanguage, AppStrings> = {
     },
     tabs: {
       home: 'Inicio',
+      extract: 'Extracto',
       launch: 'Registrar',
       planning: 'Planificación',
       insights: 'Insights',
@@ -654,6 +1033,128 @@ export const translations: Record<AppLanguage, AppStrings> = {
       removeSuccess: 'Movimiento eliminado.',
       removeError: 'No se pudo eliminar el movimiento.',
       refreshData: 'Actualizar datos',
+      positive: 'positivo',
+      negative: 'negativo',
+      seeExtract: 'Ver extracto',
+      addFirstEntry: 'Agregar primer registro',
+    },
+    extract: {
+      title: 'Extracto',
+      all: 'Todos',
+      income: 'Ingresos',
+      expense: 'Gastos',
+      balance: 'Saldo',
+      itemSingular: 'ítem',
+      itemPlural: 'ítems',
+      card: 'Tarjeta',
+      recurring: 'Recurrente',
+      loadingError: 'No se pudo cargar el extracto.',
+      removeTitle: 'Eliminar registro',
+      removeDescription: '¿Eliminar este registro?',
+      removeInstallmentDescription: (current: number, total: number) =>
+        `¿Eliminar la cuota ${current}/${total} y las siguientes?`,
+      removeError: 'No se pudo eliminar.',
+      emptyTitle: 'Sin registros',
+      emptyFilteredDescription: 'Intenta cambiar el filtro superior',
+      emptyDescription: 'Agrega registros con el botón +',
+      newEntry: 'Nuevo registro',
+    },
+    planning: {
+      eyebrow: 'Tu mes',
+      title: 'Planificación',
+      subtitle: 'Meta, tarjeta y recurrentes del mes.',
+      loading: 'Cargando planificación...',
+      loadError: 'No se pudo cargar la planificación.',
+      budgetTitle: 'Meta mensual',
+      budgetSubtitle: 'Tu límite para este mes',
+      budgetEmpty: 'Define tu meta mensual',
+      budgetSpent: (value: string) => `Gasto del mes: ${value}`,
+      budgetPercent: (value: number) => `${value}% de la meta`,
+      budgetValue: 'Valor de la meta',
+      budgetSave: 'Guardar meta',
+      budgetClear: 'Limpiar',
+      budgetInvalid: 'Ingresa una meta mensual válida.',
+      budgetSaveSuccess: 'Meta mensual guardada.',
+      budgetSaveError: 'No se pudo guardar la meta.',
+      budgetClearSuccess: 'Meta mensual eliminada.',
+      budgetClearError: 'No se pudo eliminar la meta.',
+      stateNoGoal: 'Sin meta',
+      stateGood: 'Dentro de la meta',
+      stateWarning: 'Atención',
+      stateDanger: 'Sobre la meta',
+      cardTitle: 'Tarjeta',
+      cardSubtitle: 'Cierre y vencimiento',
+      cardName: 'Nombre de la tarjeta',
+      cardClosingDay: 'Día de cierre',
+      cardDueDay: 'Día de vencimiento',
+      cardClosingPlaceholder: 'Cierre',
+      cardDuePlaceholder: 'Vencimiento',
+      cardSave: 'Guardar tarjeta',
+      cardRestore: 'Restaurar',
+      cardSaveSuccess: 'Configuración de tarjeta guardada.',
+      cardSaveError: 'No se pudo guardar la configuración de la tarjeta.',
+      cardRestoreSuccess: 'Tarjeta restaurada al valor predeterminado.',
+      cardRestoreError: 'No se pudo restaurar la tarjeta.',
+      recurringTitle: 'Recurrentes',
+      recurringSubtitle: 'Crea y acompaña',
+      recurringAdd: 'Agregar recurrente',
+      recurringEmptyTitle: 'Sin recurrentes',
+      recurringEmptyDescription: 'Crea una recurrente para comenzar.',
+      recurringCreated: 'Recurrente creada.',
+      recurringCreateError: 'No se pudo crear la recurrente.',
+      recurringActivated: 'Recurrente activada.',
+      recurringDeactivated: 'Recurrente desactivada.',
+      recurringUpdateError: 'No se pudo actualizar la recurrente.',
+      recurringDeleteTitle: 'Eliminar recurrente',
+      recurringDeleteMessage: (description: string) => `¿Deseas eliminar "${description}"?`,
+      recurringDeleted: 'Recurrente eliminada.',
+      recurringDeleteError: 'No se pudo eliminar la recurrente.',
+      recurringDescriptionRequired: 'La descripción de la recurrente es obligatoria.',
+      recurringAmountInvalid: 'Ingresa un valor válido para la recurrente.',
+      recurringDayInvalid: 'Día del mes inválido para recurrencia.',
+      recurringCategoryInvalid: 'Selecciona una categoría válida para esta recurrencia.',
+      categorySection: 'Categorías',
+      categoryEmptyTitle: 'Sin categorías',
+      categoryEmptyDescription: 'Crea categorías para personalizar el flujo.',
+      categoryCreateEmptyTitle: 'Sin categorías',
+      categoryCreateEmptyDescription: 'Crea una categoría para continuar.',
+      categoryManagementSubtitle: 'Organiza lo que aparece en la app',
+      categoryHidden: 'Categoría ocultada.',
+      categoryReactivated: 'Categoría reactivada.',
+      categoryUpdateError: 'No se pudo actualizar la categoría.',
+      categorySystemDeleteError: 'Las categorías predeterminadas no se pueden eliminar. Usa ocultar.',
+      categoryDeleteTitle: 'Eliminar categoría',
+      categoryDeleteMessage: (name: string) => `¿Deseas eliminar "${name}"?`,
+      categoryDeleted: 'Categoría eliminada.',
+      categoryDeleteError: 'No se pudo eliminar la categoría.',
+      income: 'Ingreso',
+      fixed: 'Fijo',
+      expense: 'Gasto',
+      incomeMeta: 'Ingreso',
+      expenseMeta: 'Gasto',
+      generalMeta: 'general',
+      fixedMeta: 'fijo',
+      variableMeta: 'variable',
+      systemMeta: 'predeterminada',
+      customMeta: 'custom',
+      description: 'Descripción',
+      amount: 'Valor',
+      dayOfMonth: 'Día del mes',
+      monthlyDay: (day: number) => `Mensual · Día ${day}`,
+      inactive: 'Desactivada',
+      activate: 'Activar',
+      deactivate: 'Desactivar',
+      hide: 'Ocultar',
+      delete: 'Eliminar',
+    },
+    categoryQuickAdd: {
+      trigger: 'Crear categoría',
+      title: 'Nueva categoría',
+      namePlaceholder: 'Nombre de la categoría',
+      customTitle: 'Categorías customizadas',
+      removeError: 'No se pudo eliminar.',
+      nameRequired: 'El nombre es obligatorio.',
+      saveError: 'No se pudo guardar ahora.',
     },
     launch: {
       eyebrow: 'Nuevo registro',
@@ -697,6 +1198,8 @@ export const translations: Record<AppLanguage, AppStrings> = {
       saveSuccessFixed: 'Fijo guardado en Planificación.',
       saveSuccessEntry: 'Registro guardado.',
       saveSuccessInstallments: (count: number) => `${count} cuotas guardadas.`,
+      saved: 'Guardado',
+      installmentsAutoHint: 'Las cuotas restantes se crearán automáticamente.',
       saveError: 'No se pudo guardar ahora.',
     },
     insights: {

@@ -238,7 +238,11 @@ export default function RootLayout() {
 
   return (
     <SafeAreaProvider>
-      <AppPreferencesProvider initialLanguage={language} initialThemePreference={themePreference}>
+      <AppPreferencesProvider
+        initialLanguage={language}
+        initialThemePreference={themePreference}
+        onLanguageChange={setLanguage}
+        onThemePreferenceChange={setThemePreference}>
         <RootLayoutContent
           appReady={appReady}
           bootstrapFailed={bootstrapFailed}
