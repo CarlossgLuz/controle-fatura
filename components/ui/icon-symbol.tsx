@@ -41,6 +41,10 @@ const MAPPING = {
   'rectangle.stack.fill': 'view-carousel',
   'chevron.left': 'chevron-left',
   'chevron.right': 'chevron-right',
+  'chevron.up': 'keyboard-arrow-up',
+  'chevron.down': 'keyboard-arrow-down',
+  'list.bullet.rectangle.fill': 'receipt-long',
+  'tag.fill': 'local-offer',
 } as IconMapping;
 
 /**

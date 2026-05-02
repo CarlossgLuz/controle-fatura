@@ -24,7 +24,7 @@ import {
 } from '@/domain';
 import { Radius, Spacing } from '@/constants/theme';
 import { useAppTheme } from '@/hooks/use-app-theme';
-import { formatCurrencyInput, normalizeCurrencyInput, sanitizeDigits } from '@/utils/currency-input';
+import { formatCurrencyDisplay, formatCurrencyInput, normalizeCurrencyInput, sanitizeDigits } from '@/utils/currency-input';
 
 function gerarIdCompra(): string {
   return `cmp_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
@@ -197,7 +197,7 @@ export default function CompraScreen() {
             <View style={themedStyles.card}>
               <Text style={themedStyles.label}>Valor *</Text>
               <TextInput
-                value={form.valor}
+                value={formatCurrencyDisplay(form.valor)}
                 onChangeText={(value) => onField('valor', normalizeCurrencyInput(value))}
                 placeholder="0,00"
                 placeholderTextColor={colors.textMuted}

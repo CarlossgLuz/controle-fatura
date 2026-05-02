@@ -25,7 +25,13 @@ import {
 } from '@/data/local/finance-repository';
 import { listCategoriesByUsage, type Category, type RecurringEntry } from '@/domain/finance';
 import { useAppTheme } from '@/hooks/use-app-theme';
-import { formatCurrencyInput, normalizeCurrencyInput, parseCurrencyInput, sanitizeDigits } from '@/utils/currency-input';
+import {
+  formatCurrencyDisplay,
+  normalizeCurrencyInput,
+  parseCurrencyDigits,
+  sanitizeDigits,
+  toCentsDigits,
+} from '@/utils/currency-input';
 
 type RecurringCreateType = 'income' | 'fixed' | 'expense';
 type RecurringSegment = 'income' | 'fixed' | 'expense';
@@ -133,7 +139,7 @@ export default function PlanejamentoScreen() {
       setAllCategories(allCategoriesData);
       setBudgetTarget(budget?.targetAmount ?? null);
       setMonthExpense(home.monthExpense);
-      setBudgetInput(budget?.targetAmount ? formatCurrencyInput(budget.targetAmount) : '');
+      setBudgetInput(budget?.targetAmount ? toCentsDigits(budget.targetAmount) : '');
       setCardForm({
         name: card.name,
         closingDay: String(card.closingDay),
@@ -227,7 +233,7 @@ export default function PlanejamentoScreen() {
   }, [params.segment]);
 
   const onSaveBudget = async () => {
-    const amount = parseCurrencyInput(budgetInput);
+    const amount = parseCurrencyDigits(budgetInput);
     if (!Number.isFinite(amount) || amount <= 0) {
       setError('Informe uma meta mensal válida.');
       return;
@@ -291,7 +297,7 @@ export default function PlanejamentoScreen() {
       return;
     }
 
-    const amount = parseCurrencyInput(recurringForm.amount);
+    const amount = parseCurrencyDigits(recurringForm.amount);
     if (!Number.isFinite(amount) || amount <= 0) {
       setError('Informe um valor válido para a recorrência.');
       return;
@@ -460,7 +466,7 @@ export default function PlanejamentoScreen() {
             {budgetTarget ? <Text style={styles.goalPercent}>{budgetProgressPercent}% da meta</Text> : null}
             <Text style={styles.fieldLabel}>Valor da meta</Text>
             <TextInput
-              value={budgetInput}
+              value={formatCurrencyDisplay(budgetInput)}
               onChangeText={(value) => setBudgetInput(normalizeCurrencyInput(value))}
               placeholder="Valor da meta"
               placeholderTextColor={colors.textMuted}
@@ -556,7 +562,7 @@ export default function PlanejamentoScreen() {
               <View style={styles.fieldGroup}>
                 <Text style={styles.fieldLabel}>Valor</Text>
                 <TextInput
-                  value={recurringForm.amount}
+              value={formatCurrencyDisplay(recurringForm.amount)}
                   onChangeText={(value) =>
                     setRecurringForm((prev) => ({ ...prev, amount: normalizeCurrencyInput(value) }))
                   }

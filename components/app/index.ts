@@ -11,3 +11,4 @@ export * from '@/components/app/category-quick-add';
 export * from '@/components/app/app-copyright';
 export * from '@/components/app/boot-screen';
 export * from '@/components/app/app-quick-settings';
+export * from '@/components/app/launch-sheet';

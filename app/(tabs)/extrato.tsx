@@ -1,6 +1,5 @@
 import { useFocusEffect } from '@react-navigation/native';
-import { useRouter } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   Alert,
   Pressable,
@@ -26,6 +25,7 @@ import {
 } from '@/data/local/extrato-loader';
 import { excluirCompra } from '@/data/sqlite';
 import { useAppTheme } from '@/hooks/use-app-theme';
+import { useLaunchSheet } from '@/providers/launch-sheet-context';
 
 type FilterKind = 'all' | 'income' | 'expense';
 
@@ -53,8 +53,8 @@ function groupByDate(movements: MonthlyMovement[]): { date: string; items: Month
 }
 
 export default function ExtratoScreen() {
-  const router = useRouter();
   const { colors, mode } = useAppTheme();
+  const { openSheet, revision } = useLaunchSheet();
   const insets = useSafeAreaInsets();
   const isDark = mode === 'dark';
   const styles = createStyles(colors, isDark);
@@ -67,9 +67,9 @@ export default function ExtratoScreen() {
 
   const openLaunch = useCallback(
     (type: 'receita' | 'gasto') => {
-      router.push({ pathname: '/(tabs)/lancar', params: { type } });
+      openSheet(type);
     },
-    [router]
+    [openSheet]
   );
 
   const load = useCallback(async () => {
@@ -86,6 +86,12 @@ export default function ExtratoScreen() {
   }, [monthKey]);
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
+
+  useEffect(() => {
+    if (revision > 0) {
+      void load();
+    }
+  }, [load, revision]);
 
   const goToPrev = () => setMonthKey((k) => shiftMonthKey(k, -1));
   const goToNext = () => {

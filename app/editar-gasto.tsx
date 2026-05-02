@@ -11,7 +11,7 @@ import {
 } from '@/data/local/finance-repository';
 import { listCategoriesByUsage, type Category } from '@/domain/finance';
 import { useAppTheme } from '@/hooks/use-app-theme';
-import { formatCurrencyInput, normalizeCurrencyInput, parseCurrencyInput } from '@/utils/currency-input';
+import { formatCurrencyDisplay, formatCurrencyInput, normalizeCurrencyInput, parseCurrencyInput } from '@/utils/currency-input';
 
 interface EditExpenseForm {
   amount: string;
@@ -202,7 +202,7 @@ export default function EditarGastoScreen() {
 
           <Text style={styles.label}>Valor</Text>
           <TextInput
-            value={form.amount}
+            value={formatCurrencyDisplay(form.amount)}
             onChangeText={(value) => onField('amount', normalizeCurrencyInput(value))}
             placeholder="0,00"
             placeholderTextColor={colors.textMuted}

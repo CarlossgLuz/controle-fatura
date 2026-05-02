@@ -1,55 +1,49 @@
-function stripToSupportedCurrencyChars(raw: string): string {
-  return raw.replace(/[^\d.,]/g, '');
-}
-
 export function sanitizeDigits(raw: string): string {
   return raw.replace(/\D/g, '');
 }
 
-export function normalizeCurrencyInput(raw: string): string {
-  const cleaned = stripToSupportedCurrencyChars(raw);
-  if (!cleaned) {
-    return '';
-  }
+export function formatCurrencyDisplay(rawDigits: string): string {
+  const digits = sanitizeDigits(rawDigits);
+  if (!digits) return '';
 
-  const lastSeparatorIndex = Math.max(cleaned.lastIndexOf(','), cleaned.lastIndexOf('.'));
-  if (lastSeparatorIndex === -1) {
-    return sanitizeDigits(cleaned);
-  }
+  const cents = parseInt(digits, 10);
+  if (!cents) return '';
 
-  const integerDigits = sanitizeDigits(cleaned.slice(0, lastSeparatorIndex));
-  const decimalDigitsRaw = sanitizeDigits(cleaned.slice(lastSeparatorIndex + 1));
-  const hasTrailingSeparator = lastSeparatorIndex === cleaned.length - 1;
+  const reais = Math.floor(cents / 100);
+  const centavos = cents % 100;
+  const withThousands = reais.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
 
-  if (hasTrailingSeparator) {
-    return `${integerDigits || '0'},`;
-  }
+  return `${withThousands},${String(centavos).padStart(2, '0')}`;
+}
 
-  if (!decimalDigitsRaw) {
-    return integerDigits || '0';
-  }
+export function parseCurrencyDigits(rawDigits: string): number {
+  const digits = sanitizeDigits(rawDigits);
+  if (!digits) return NaN;
 
-  if (decimalDigitsRaw.length > 2) {
-    return sanitizeDigits(cleaned);
-  }
+  const cents = parseInt(digits, 10);
+  return Number.isFinite(cents) && cents > 0 ? cents / 100 : NaN;
+}
 
-  return `${integerDigits || '0'},${decimalDigitsRaw.slice(0, 2)}`;
+export function toCentsDigits(value: number): string {
+  if (!Number.isFinite(value) || value <= 0) return '';
+  return String(Math.round(value * 100));
 }
 
 export function parseCurrencyInput(raw: string): number {
-  const normalized = normalizeCurrencyInput(raw);
-  if (!normalized) {
-    return NaN;
+  const hasCommaOrDot = /[,.]/.test(raw);
+  if (hasCommaOrDot) {
+    const normalized = raw.replace(/\./g, '').replace(',', '.');
+    const value = Number(normalized);
+    return Number.isFinite(value) && value > 0 ? value : NaN;
   }
 
-  const parsed = Number(normalized.replace(',', '.'));
-  return Number.isFinite(parsed) ? parsed : NaN;
+  return parseCurrencyDigits(raw);
 }
 
 export function formatCurrencyInput(value: number): string {
-  if (!Number.isFinite(value)) {
-    return '';
-  }
+  return toCentsDigits(value);
+}
 
-  return value.toFixed(2).replace('.', ',');
+export function normalizeCurrencyInput(raw: string): string {
+  return sanitizeDigits(raw);
 }

@@ -1,3 +1,5 @@
+import { Platform } from 'react-native';
+
 import { getDatabase } from '@/data/sqlite/db';
 
 let initialized = false;
@@ -26,6 +28,11 @@ CREATE INDEX IF NOT EXISTS idx_compras_data_compra ON compras (data_compra);
 `;
 
 export async function initDatabase(): Promise<void> {
+  if (Platform.OS === 'web') {
+    initialized = true;
+    return;
+  }
+
   if (initialized) {
     return;
   }
