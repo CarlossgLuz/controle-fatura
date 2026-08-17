@@ -1,6 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { Radius, Spacing } from '@/constants/theme';
+import { Dimensions, Radius, Spacing, Typography } from '@/constants/theme';
 import { useAppTheme } from '@/hooks/use-app-theme';
 
 interface EmptyStateProps {
@@ -18,8 +18,14 @@ export function EmptyState({ title, description, actionLabel, onActionPress }: E
       <Text style={[styles.title, { color: colors.textPrimary }]}>{title}</Text>
       <Text style={[styles.description, { color: colors.textSecondary }]}>{description}</Text>
       {actionLabel && onActionPress ? (
-        <Pressable style={[styles.action, { backgroundColor: colors.primary }]} onPress={onActionPress}>
-          <Text style={styles.actionText}>{actionLabel}</Text>
+        <Pressable
+          accessibilityRole="button"
+          style={({ pressed }) => [
+            styles.action,
+            { backgroundColor: pressed ? colors.actionPrimaryPressed : colors.actionPrimary },
+          ]}
+          onPress={onActionPress}>
+          <Text style={[styles.actionText, { color: colors.onPrimaryAction }]}>{actionLabel}</Text>
         </Pressable>
       ) : null}
     </View>
@@ -45,15 +51,14 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   action: {
-    minHeight: 40,
-    borderRadius: Radius.md,
+    minHeight: Dimensions.buttonHeight,
+    minWidth: Dimensions.minTouchTarget,
+    borderRadius: Radius.control,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: Spacing.md,
+    paddingHorizontal: Spacing.lg,
   },
   actionText: {
-    color: '#FFFFFF',
-    fontSize: 13,
-    fontWeight: '700',
+    ...Typography.label,
   },
 });

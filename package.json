@@ -11,7 +11,7 @@
     "lint": "expo lint",
     "typecheck": "tsc --noEmit",
     "test": "jest --runInBand",
-    "test:unit": "jest --runInBand domain/v2 application/quick-add data/legacy data/local/finance-repository.idempotency.test.ts",
+    "test:unit": "jest --runInBand domain/v2 application/quick-add data/legacy data/local/finance-repository.idempotency.test.ts constants/tab-destinations.test.ts",
     "web:export": "expo export --platform web"
   },
   "dependencies": {

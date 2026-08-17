@@ -18,8 +18,30 @@ export interface AppStrings {
     home: string;
     extract: string;
     launch: string;
+    summary: string;
+    movements: string;
     planning: string;
+    wallets: string;
     insights: string;
+    quickAdd: string;
+  };
+  wallets: {
+    title: string;
+    subtitle: string;
+    loading: string;
+    loadFailedTitle: string;
+    loadFailedDescription: string;
+    refreshing: string;
+    refreshFailedTitle: string;
+    refreshFailedDescription: string;
+    retryRefresh: string;
+    currentScopeTitle: string;
+    currentScopeDescription: string;
+    mainCard: string;
+    currentInvoice: string;
+    invoiceCycle: string;
+    closing: string;
+    due: string;
   };
   boot: {
     preparing: string;
@@ -324,8 +346,31 @@ export const translations: Record<AppLanguage, AppStrings> = {
       home: 'Início',
       extract: 'Extrato',
       launch: 'Lançar',
+      summary: 'Resumo',
+      movements: 'Movimentos',
       planning: 'Planejamento',
+      wallets: 'Carteiras',
       insights: 'Insights',
+      quickAdd: 'Adicionar movimento',
+    },
+    wallets: {
+      title: 'Carteiras',
+      subtitle: 'Consulte o cartão principal e a fatura do ciclo atual.',
+      loading: 'Carregando carteira…',
+      loadFailedTitle: 'Não foi possível carregar a carteira',
+      loadFailedDescription: 'Tente novamente para consultar o cartão e a fatura atual.',
+      refreshing: 'Atualizando cartão e fatura…',
+      refreshFailedTitle: 'Os dados podem estar desatualizados',
+      refreshFailedDescription: 'Não foi possível buscar a versão mais recente. Os dados anteriores continuam visíveis.',
+      retryRefresh: 'Tentar atualizar novamente',
+      currentScopeTitle: 'Disponível agora',
+      currentScopeDescription:
+        'Nesta versão, Carteiras mostra somente o cartão principal e a fatura atual. Contas e dinheiro ainda não estão disponíveis.',
+      mainCard: 'Cartão principal',
+      currentInvoice: 'Fatura atual',
+      invoiceCycle: 'Ciclo da fatura',
+      closing: 'Fechamento',
+      due: 'Vencimento',
     },
     boot: {
       preparing: 'Preparando o Clarium',
@@ -644,8 +689,31 @@ export const translations: Record<AppLanguage, AppStrings> = {
       home: 'Home',
       extract: 'Extract',
       launch: 'Add',
+      summary: 'Summary',
+      movements: 'Movements',
       planning: 'Planning',
+      wallets: 'Wallets',
       insights: 'Insights',
+      quickAdd: 'Add movement',
+    },
+    wallets: {
+      title: 'Wallets',
+      subtitle: 'View your main card and the invoice for the current cycle.',
+      loading: 'Loading wallet…',
+      loadFailedTitle: 'Could not load the wallet',
+      loadFailedDescription: 'Try again to view the card and current invoice.',
+      refreshing: 'Refreshing card and invoice…',
+      refreshFailedTitle: 'The data may be out of date',
+      refreshFailedDescription: 'Could not fetch the latest version. The previous data remains visible.',
+      retryRefresh: 'Try refreshing again',
+      currentScopeTitle: 'Available now',
+      currentScopeDescription:
+        'In this version, Wallets shows only the main card and current invoice. Accounts and cash are not available yet.',
+      mainCard: 'Main card',
+      currentInvoice: 'Current invoice',
+      invoiceCycle: 'Invoice cycle',
+      closing: 'Closing date',
+      due: 'Due date',
     },
     boot: {
       preparing: 'Preparing Clarium',
@@ -959,8 +1027,31 @@ export const translations: Record<AppLanguage, AppStrings> = {
       home: 'Inicio',
       extract: 'Extracto',
       launch: 'Registrar',
+      summary: 'Resumen',
+      movements: 'Movimientos',
       planning: 'Planificación',
+      wallets: 'Carteras',
       insights: 'Insights',
+      quickAdd: 'Agregar movimiento',
+    },
+    wallets: {
+      title: 'Carteras',
+      subtitle: 'Consulta la tarjeta principal y la factura del ciclo actual.',
+      loading: 'Cargando cartera…',
+      loadFailedTitle: 'No se pudo cargar la cartera',
+      loadFailedDescription: 'Intenta de nuevo para consultar la tarjeta y la factura actual.',
+      refreshing: 'Actualizando tarjeta y factura…',
+      refreshFailedTitle: 'Los datos pueden estar desactualizados',
+      refreshFailedDescription: 'No se pudo obtener la versión más reciente. Los datos anteriores siguen visibles.',
+      retryRefresh: 'Intentar actualizar de nuevo',
+      currentScopeTitle: 'Disponible ahora',
+      currentScopeDescription:
+        'En esta versión, Carteras muestra solo la tarjeta principal y la factura actual. Las cuentas y el efectivo aún no están disponibles.',
+      mainCard: 'Tarjeta principal',
+      currentInvoice: 'Factura actual',
+      invoiceCycle: 'Ciclo de facturación',
+      closing: 'Cierre',
+      due: 'Vencimiento',
     },
     boot: {
       preparing: 'Preparando Clarium',

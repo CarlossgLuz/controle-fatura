@@ -1,25 +1,56 @@
 import { Tabs } from 'expo-router';
-import { Platform, Pressable, StyleSheet, View } from 'react-native';
+import { useState } from 'react';
+import { Platform, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { HapticTab } from '@/components/haptic-tab';
 import { LaunchSheet } from '@/components/app/launch-sheet';
+import { HapticTab } from '@/components/haptic-tab';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Radius, Spacing } from '@/constants/theme';
+import { Dimensions, Radius, Spacing } from '@/constants/theme';
+import { TAB_DESTINATIONS } from '@/constants/tab-destinations';
 import { useAppTheme } from '@/hooks/use-app-theme';
 import { useI18n } from '@/hooks/use-i18n';
 import { LaunchSheetProvider, useLaunchSheet } from '@/providers/launch-sheet-context';
 
-function FabButton() {
-  const { openSheet } = useLaunchSheet();
+const LARGE_TEXT_SCALE = 1.5;
+const EXPANDED_BREAKPOINT = 840;
+const RAIL_BASE_WIDTH = 112;
+const RAIL_MAX_WIDTH = 160;
+const FAB_CLEARANCE = Dimensions.fabSize + Spacing.lg;
+
+function QuickAddButton({ bottom, right }: { bottom: number; right?: number }) {
+  const { isOpen, openSheet } = useLaunchSheet();
   const { colors } = useAppTheme();
+  const { strings } = useI18n();
+  const [focused, setFocused] = useState(false);
 
   return (
     <Pressable
+      accessibilityLabel={strings.tabs.quickAdd}
+      accessibilityRole="button"
+      accessibilityState={{ expanded: isOpen }}
+      hitSlop={Spacing.xs}
+      onBlur={() => setFocused(false)}
+      onFocus={() => setFocused(true)}
       onPress={() => openSheet('gasto')}
-      style={({ pressed }) => [styles.fabWrap, pressed && styles.pressed]}>
-      <View style={[styles.fab, { backgroundColor: colors.primary }]}>
-        <IconSymbol name="plus" size={26} color="#FFFFFF" />
+      style={({ pressed }) => [
+        styles.fabTarget,
+        right === undefined ? styles.fabCentered : null,
+        { bottom, right },
+        pressed && styles.pressed,
+      ]}>
+      <View
+        accessibilityElementsHidden
+        importantForAccessibility="no-hide-descendants"
+        style={[
+          styles.fab,
+          {
+            backgroundColor: colors.actionPrimary,
+            borderColor: focused ? colors.onPrimaryAction : colors.actionPrimary,
+            shadowColor: colors.shadow,
+          },
+        ]}>
+        <IconSymbol name="plus" size={Dimensions.iconSize} color={colors.onPrimaryAction} />
       </View>
     </Pressable>
   );
@@ -27,76 +58,104 @@ function FabButton() {
 
 function TabsInner() {
   const insets = useSafeAreaInsets();
-  const { colors, legacyColors } = useAppTheme();
+  const { fontScale, width } = useWindowDimensions();
+  const { colors } = useAppTheme();
   const { strings } = useI18n();
-  const tabBarHeight = 62 + Math.max(insets.bottom, 8);
+  const largeText = fontScale >= LARGE_TEXT_SCALE;
+  const expanded = width >= EXPANDED_BREAKPOINT;
+  const railWidth = Math.min(
+    RAIL_MAX_WIDTH,
+    Math.round(RAIL_BASE_WIDTH + Math.max(0, fontScale - 1) * 48)
+  );
+  const tabContentHeight = largeText ? 84 : 78;
+  const tabBarHeight = tabContentHeight + Math.max(insets.bottom, Spacing.sm);
+  const quickAddBottom = expanded
+    ? Math.max(insets.bottom, Spacing.xl)
+    : tabBarHeight + Spacing.md;
+  const quickAddRight = expanded ? Math.max(insets.right, Spacing.xl) : undefined;
 
   return (
     <>
       <Tabs
-        initialRouteName="inicio"
+        initialRouteName="resumo"
         screenOptions={{
-          tabBarActiveTintColor: legacyColors.tint,
-          tabBarInactiveTintColor: legacyColors.tabIconDefault,
+          sceneStyle: {
+            paddingBottom: expanded ? FAB_CLEARANCE + Spacing.md : FAB_CLEARANCE,
+            backgroundColor: colors.background,
+          },
+          tabBarActiveTintColor: colors.actionPrimary,
+          tabBarInactiveTintColor: colors.textSecondaryV2,
+          tabBarPosition: expanded ? 'left' : 'bottom',
+          tabBarVariant: expanded ? 'material' : 'uikit',
+          tabBarLabelPosition: 'below-icon',
           headerShown: false,
+          tabBarAllowFontScaling: true,
           tabBarButton: HapticTab,
           tabBarHideOnKeyboard: true,
           tabBarStyle: {
-            backgroundColor: colors.surface,
-            borderTopColor: colors.border,
-            borderTopWidth: 1,
-            height: tabBarHeight,
-            paddingTop: Spacing.xs,
+            backgroundColor: colors.surfaceV2,
+            borderTopColor: expanded ? 'transparent' : colors.borderSubtle,
+            borderTopWidth: expanded ? 0 : 1,
+            borderRightColor: expanded ? colors.borderSubtle : 'transparent',
+            borderRightWidth: expanded ? 1 : 0,
+            width: expanded ? railWidth : undefined,
+            height: expanded ? undefined : tabBarHeight,
+            paddingTop: expanded ? Math.max(insets.top, Spacing.lg) : Spacing.sm,
             paddingBottom: Math.max(insets.bottom, Spacing.sm),
-            paddingHorizontal: Platform.select({ ios: Spacing.sm, default: Spacing.xs }),
+            paddingHorizontal: expanded
+              ? Spacing.sm
+              : Platform.select({ ios: Spacing.sm, default: Spacing.xs }),
           },
           tabBarItemStyle: {
-            borderRadius: Radius.lg,
+            minHeight: expanded ? 64 : Dimensions.minTouchTarget,
+            maxHeight: expanded ? 80 : undefined,
+            width: expanded ? railWidth - Spacing.lg : undefined,
+            flexGrow: expanded ? 0 : undefined,
+            flexBasis: expanded ? 'auto' : undefined,
+            borderRadius: Radius.control,
           },
-          tabBarLabelStyle: {
-            fontSize: 11,
-            fontWeight: '600',
+          tabBarIconStyle: {
+            minHeight: Dimensions.iconSize,
           },
         }}>
-        <Tabs.Screen
-          name="inicio"
-          options={{
-            title: strings.tabs.home,
-            tabBarIcon: ({ color }) => <IconSymbol size={25} name="house.fill" color={color} />,
-          }}
-        />
-        <Tabs.Screen
-          name="extrato"
-          options={{
-            title: strings.tabs.extract,
-            tabBarIcon: ({ color }) => <IconSymbol size={25} name="list.bullet.rectangle.fill" color={color} />,
-          }}
-        />
-        <Tabs.Screen
-          name="lancar"
-          options={{
-            title: '',
-            tabBarButton: () => <FabButton />,
-            tabBarIcon: () => null,
-          }}
-        />
-        <Tabs.Screen
-          name="planejamento"
-          options={{
-            title: strings.tabs.planning,
-            tabBarIcon: ({ color }) => <IconSymbol size={25} name="calendar.circle.fill" color={color} />,
-          }}
-        />
-        <Tabs.Screen
-          name="insights"
-          options={{
-            title: strings.tabs.insights,
-            tabBarIcon: ({ color }) => <IconSymbol size={25} name="chart.bar.fill" color={color} />,
-          }}
-        />
+        {TAB_DESTINATIONS.map((destination) => {
+          const title = strings.tabs[destination.translationKey];
+
+          return (
+            <Tabs.Screen
+              key={destination.name}
+              name={destination.name}
+              options={{
+                title,
+                tabBarAccessibilityLabel: title,
+                tabBarIcon: ({ color }) => (
+                  <IconSymbol size={Dimensions.iconSize} name={destination.icon} color={color} />
+                ),
+                tabBarLabel: ({ color, focused }) => {
+                  if (!expanded && largeText && !focused) return null;
+
+                  return (
+                    <Text
+                      numberOfLines={2}
+                      style={[styles.tabLabel, { color }]}
+                      textBreakStrategy="balanced">
+                      {title}
+                    </Text>
+                  );
+                },
+              }}
+            />
+          );
+        })}
+
         <Tabs.Screen name="index" options={{ href: null }} />
+        <Tabs.Screen name="inicio" options={{ href: null }} />
+        <Tabs.Screen name="extrato" options={{ href: null }} />
+        <Tabs.Screen name="lancar" options={{ href: null }} />
         <Tabs.Screen name="explore" options={{ href: null }} />
       </Tabs>
+
+      <QuickAddButton bottom={quickAddBottom} right={quickAddRight} />
       <LaunchSheet />
     </>
   );
@@ -111,25 +170,36 @@ export default function TabLayout() {
 }
 
 const styles = StyleSheet.create({
-  fabWrap: {
-    flex: 1,
+  tabLabel: {
+    fontSize: 11,
+    lineHeight: 14,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  fabTarget: {
+    position: 'absolute',
+    zIndex: 10,
+    width: 64,
+    height: 64,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  pressed: {
-    opacity: 0.82,
+  fabCentered: {
+    alignSelf: 'center',
   },
   fab: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: Dimensions.fabSize,
+    height: Dimensions.fabSize,
+    borderRadius: Radius.full,
+    borderWidth: 3,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 6,
-    shadowColor: '#000000',
     shadowOpacity: 0.22,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 4 },
     elevation: 6,
+  },
+  pressed: {
+    opacity: 0.82,
   },
 });
