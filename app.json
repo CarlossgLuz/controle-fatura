@@ -23,7 +23,8 @@
         }
       ],
       "expo-sqlite",
-      "expo-web-browser"
+      "expo-web-browser",
+      "expo-font"
     ],
     "android": {
       "package": "com.carlosgabriel.clarium",
