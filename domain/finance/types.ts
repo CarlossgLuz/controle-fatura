@@ -41,6 +41,7 @@ export interface TransactionInstallment {
 
 export interface Transaction {
   id: string;
+  operationId?: string;
   cardId: CardId;
   kind: TransactionKind;
   amount: number;

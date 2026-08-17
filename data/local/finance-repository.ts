@@ -130,6 +130,10 @@ function sanitizeStoredTransaction(
 
   const value: Transaction = {
     id: typeof entry.id === 'string' && entry.id ? entry.id : fallbackId,
+    operationId:
+      typeof entry.operationId === 'string' && entry.operationId.trim()
+        ? entry.operationId.trim()
+        : undefined,
     cardId: DEFAULT_CARD_CONFIG.id,
     kind: entry.kind,
     amount: entry.amount,
@@ -147,6 +151,7 @@ function sanitizeStoredTransaction(
 
   const changed =
     value.id !== entry.id ||
+    value.operationId !== entry.operationId ||
     entry.cardId !== DEFAULT_CARD_CONFIG.id ||
     entry.source !== source ||
     !isMonthKey(entry.cycleId) ||
@@ -305,8 +310,48 @@ export async function getTransactionById(transactionId: string): Promise<Transac
   return current.find((entry) => entry.id === transactionId) ?? null;
 }
 
+export class TransactionOperationConflictError extends Error {
+  constructor(operationId: string) {
+    super(`Operation ID already belongs to a different transaction: ${operationId}`);
+    this.name = 'TransactionOperationConflictError';
+  }
+}
+
+function sameOptionalText(left: string | undefined, right: string | undefined): boolean {
+  return (left?.trim() || undefined) === (right?.trim() || undefined);
+}
+
+function sameTransactionInput(existing: Transaction, input: NewTransactionInput): boolean {
+  return (
+    existing.cardId === input.cardId &&
+    existing.kind === input.kind &&
+    Math.round(existing.amount * 100) === Math.round(input.amount * 100) &&
+    existing.date === input.date &&
+    existing.categoryId === input.categoryId &&
+    existing.description === input.description.trim() &&
+    sameOptionalText(existing.notes, input.notes) &&
+    existing.recurringEntryId === input.recurringEntryId
+  );
+}
+
+function existingOperation(
+  current: Transaction[],
+  input: NewTransactionInput
+): Transaction[] {
+  if (!input.operationId) return [];
+  return current.filter((entry) => entry.operationId === input.operationId);
+}
+
 export async function addTransaction(input: NewTransactionInput): Promise<Transaction> {
   const current = await listTransactions();
+  const existing = existingOperation(current, input);
+  if (existing.length) {
+    if (existing.length === 1 && !existing[0].installment && sameTransactionInput(existing[0], input)) {
+      return existing[0];
+    }
+    throw new TransactionOperationConflictError(input.operationId!);
+  }
+
   const card = await getCardConfig();
   const created = createTransaction(input, card, { id: generateId('txn') });
   await writeJson(TRANSACTIONS_KEY, [created, ...current]);
@@ -321,6 +366,31 @@ export async function addInstallmentTransaction(
   const current = await listTransactions();
   const card = await getCardConfig();
   const now = new Date();
+  const existing = existingOperation(current, input).sort(
+    (left, right) => (left.installment?.current ?? 0) - (right.installment?.current ?? 0)
+  );
+  if (existing.length) {
+    const expected = createInstallmentTransactions(input, installmentTotal, card, {
+      idPrefix: 'expected',
+      groupId: 'expected',
+      installmentCurrent,
+      now: new Date(0),
+    });
+    const matches =
+      existing.length === expected.length &&
+      existing.every((entry, index) => {
+        const expectedEntry = expected[index];
+        return (
+          sameTransactionInput(entry, expectedEntry) &&
+          entry.installment?.current === expectedEntry.installment?.current &&
+          entry.installment?.total === expectedEntry.installment?.total
+        );
+      });
+
+    if (matches) return existing;
+    throw new TransactionOperationConflictError(input.operationId!);
+  }
+
   const created = createInstallmentTransactions(input, installmentTotal, card, {
     idPrefix: generateId('txn'),
     groupId: generateId('installment'),

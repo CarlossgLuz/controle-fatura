@@ -14,11 +14,8 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { DatePickerField } from '@/components/app/date-picker-field';
-import {
-  addInstallmentTransaction,
-  addTransaction,
-  listCategories,
-} from '@/data/local/finance-repository';
+import { submitLegacyQuickAdd } from '@/data/legacy/legacy-quick-add-writer';
+import { listCategories } from '@/data/local/finance-repository';
 import { listCategoriesByUsage, type Category } from '@/domain/finance';
 import { DEFAULT_CARD_CONFIG } from '@/domain/finance/types';
 import { useAppTheme } from '@/hooks/use-app-theme';
@@ -31,6 +28,7 @@ import {
 } from '@/utils/currency-input';
 
 interface LaunchForm {
+  operationId: string;
   type: LaunchType;
   amount: string;
   description: string;
@@ -38,6 +36,13 @@ interface LaunchForm {
   categoryId: string;
   installmentTotal: string;
   installmentCurrent: string;
+}
+
+let operationSequence = 0;
+
+function createOperationId(): string {
+  operationSequence += 1;
+  return `quick_${Date.now().toString(36)}_${operationSequence.toString(36)}`;
 }
 
 function toIsoToday(date = new Date()): `${number}-${number}-${number}` {
@@ -49,6 +54,7 @@ function toIsoToday(date = new Date()): `${number}-${number}-${number}` {
 
 function defaultForm(type: LaunchType = 'gasto'): LaunchForm {
   return {
+    operationId: createOperationId(),
     type,
     amount: '',
     description: '',
@@ -173,25 +179,22 @@ export function LaunchSheet() {
     setError(null);
 
     try {
-      const amount = parseCurrencyDigits(form.amount);
       const installments = form.type === 'gasto' ? Number(form.installmentTotal || '1') : 1;
       const current = form.type === 'gasto' ? Number(form.installmentCurrent || '1') : 1;
-      const payload = {
-        cardId: DEFAULT_CARD_CONFIG.id,
+      await submitLegacyQuickAdd.execute({
+        operationId: form.operationId,
         kind: form.type === 'receita' ? 'income' as const : 'expense' as const,
-        amount,
-        date: form.date,
+        amountCents: Number(sanitizeDigits(form.amount)),
+        occurredOn: form.date,
+        sourceAccountId: DEFAULT_CARD_CONFIG.id,
         categoryId: form.categoryId,
         description: form.description.trim(),
         notes: undefined,
-        recurringEntryId: undefined,
-      };
-
-      if (form.type === 'gasto' && installments > 1) {
-        await addInstallmentTransaction(payload, installments, current);
-      } else {
-        await addTransaction(payload);
-      }
+        installments:
+          form.type === 'gasto' && installments > 1
+            ? { total: installments, current }
+            : undefined,
+      });
 
       markChanged();
       setSuccess(true);
@@ -211,11 +214,13 @@ export function LaunchSheet() {
   return (
     <Modal transparent visible={visible} animationType="none" onRequestClose={closeSheet}>
       <Animated.View style={[styles.backdrop, { opacity: fadeAnim }]}>
-        <Pressable style={StyleSheet.absoluteFill} onPress={closeSheet} />
+        <Pressable style={StyleSheet.absoluteFill} onPress={closeSheet} accessible={false} />
       </Animated.View>
       <Animated.View style={[styles.wrap, { transform: [{ translateY: slideAnim }] }]} pointerEvents="box-none">
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-          <View style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, 20) }]}>
+          <View
+            style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, 20) }]}
+            accessibilityViewIsModal>
             <View style={[styles.handle, { backgroundColor: colors.border }]} />
 
             <View style={styles.header}>
@@ -239,6 +244,7 @@ export function LaunchSheet() {
                     key={type}
                     style={[styles.toggleButton, { backgroundColor }]}
                     accessibilityRole="button"
+                    accessibilityLabel={type === 'gasto' ? strings.launch.expense : strings.launch.income}
                     accessibilityState={{ selected: active }}
                     onPress={() => switchType(type)}>
                     <Text style={[styles.toggleText, { color: active ? '#FFFFFF' : colors.textSecondary }]}>
@@ -261,8 +267,10 @@ export function LaunchSheet() {
                   placeholder={strings.launch.valuePlaceholder}
                   placeholderTextColor={`${accent}50`}
                   keyboardType="number-pad"
+                  accessibilityLabel={strings.launch.amount}
                   style={[styles.amountInput, { color: accent }]}
                   maxLength={15}
+                  autoFocus
                 />
               </View>
 
@@ -273,6 +281,7 @@ export function LaunchSheet() {
                   onChangeText={(value) => onField('description', value)}
                   placeholder={strings.launch.descriptionPlaceholder}
                   placeholderTextColor={colors.textMuted}
+                  accessibilityLabel={strings.launch.description}
                   style={[
                     styles.input,
                     { backgroundColor: colors.surfaceElevated, borderColor: colors.border, color: colors.textPrimary },
@@ -297,6 +306,7 @@ export function LaunchSheet() {
                         placeholder={strings.launch.installmentsPlaceholder}
                         placeholderTextColor={colors.textMuted}
                         keyboardType="number-pad"
+                        accessibilityLabel={strings.launch.installments}
                         style={[
                           styles.input,
                           { backgroundColor: colors.surfaceElevated, borderColor: colors.border, color: colors.textPrimary },
@@ -311,6 +321,7 @@ export function LaunchSheet() {
                         placeholder={strings.launch.installmentCurrentPlaceholder}
                         placeholderTextColor={colors.textMuted}
                         keyboardType="number-pad"
+                        accessibilityLabel={strings.launch.installmentCurrent}
                         style={[
                           styles.input,
                           { backgroundColor: colors.surfaceElevated, borderColor: colors.border, color: colors.textPrimary },
@@ -342,6 +353,7 @@ export function LaunchSheet() {
                           },
                         ]}
                         accessibilityRole="button"
+                        accessibilityLabel={category.name}
                         accessibilityState={{ selected: active }}
                         onPress={() => onField('categoryId', category.id)}>
                         <Text style={[styles.chipText, { color: active ? '#FFFFFF' : colors.textSecondary }]}>
@@ -354,18 +366,25 @@ export function LaunchSheet() {
               </View>
 
               {error ? (
-                <View style={[styles.feedback, { backgroundColor: `${colors.expense}15`, borderColor: `${colors.expense}40` }]}>
+                <View
+                  accessibilityRole="alert"
+                  style={[styles.feedback, { backgroundColor: `${colors.expense}15`, borderColor: `${colors.expense}40` }]}>
                   <Text style={[styles.feedbackText, { color: colors.expense }]}>{error}</Text>
                 </View>
               ) : null}
               {success ? (
-                <View style={[styles.feedback, { backgroundColor: `${colors.income}15`, borderColor: `${colors.income}40` }]}>
+                <View
+                  accessibilityLiveRegion="polite"
+                  style={[styles.feedback, { backgroundColor: `${colors.income}15`, borderColor: `${colors.income}40` }]}>
                   <Text style={[styles.feedbackText, { color: colors.income }]}>{strings.launch.saveSuccessEntry}</Text>
                 </View>
               ) : null}
 
               <Pressable
                 style={[styles.saveButton, { backgroundColor: saving || success ? `${accent}70` : accent }]}
+                accessibilityRole="button"
+                accessibilityLabel={strings.launch.save}
+                accessibilityState={{ disabled: saving || success, busy: saving }}
                 onPress={onSave}
                 disabled={saving || success}>
                 <Text style={styles.saveText}>
@@ -395,10 +414,10 @@ function createStyles(colors: ReturnType<typeof useAppTheme>['colors'], isDark: 
     handle: { width: 40, height: 4, borderRadius: 2, alignSelf: 'center', marginBottom: 18 },
     header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 },
     title: { fontSize: 19, fontWeight: '800' },
-    closeButton: { minWidth: 44, minHeight: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
+    closeButton: { minWidth: 48, minHeight: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center' },
     closeText: { fontSize: 13, fontWeight: '700' },
     toggle: { flexDirection: 'row', borderRadius: 14, borderWidth: 1, padding: 3, marginBottom: 18 },
-    toggleButton: { flex: 1, minHeight: 44, paddingVertical: 10, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
+    toggleButton: { flex: 1, minHeight: 48, paddingVertical: 10, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
     toggleText: { fontSize: 14, fontWeight: '700' },
     scroll: { gap: 18, paddingBottom: 8 },
     amountBox: {
@@ -427,7 +446,7 @@ function createStyles(colors: ReturnType<typeof useAppTheme>['colors'], isDark: 
     halfField: { flex: 1, gap: 5 },
     hint: { fontSize: 11, lineHeight: 16 },
     chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-    chip: { minHeight: 44, borderRadius: 999, borderWidth: 1, paddingHorizontal: 13, paddingVertical: 8, justifyContent: 'center' },
+    chip: { minHeight: 48, borderRadius: 999, borderWidth: 1, paddingHorizontal: 13, paddingVertical: 8, justifyContent: 'center' },
     chipText: { fontSize: 13, fontWeight: '600' },
     feedback: { borderRadius: 12, borderWidth: 1, padding: 13 },
     feedbackText: { fontSize: 13, fontWeight: '500' },
