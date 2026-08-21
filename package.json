@@ -5,13 +5,13 @@
   "scripts": {
     "start": "expo start",
     "reset-project": "node ./scripts/reset-project.js",
-    "android": "expo start --android",
-    "ios": "expo start --ios",
+    "android": "expo run:android",
+    "ios": "expo run:ios",
     "web": "expo start --web",
     "lint": "expo lint",
     "typecheck": "tsc --noEmit",
     "test": "jest --runInBand",
-    "test:unit": "jest --runInBand domain/v2 application/quick-add data/legacy data/local/finance-repository.idempotency.test.ts constants/tab-destinations.test.ts",
+    "test:unit": "jest --runInBand domain/v2 application/quick-add data/legacy data/sqlite-v2 data/local/finance-repository.idempotency.test.ts constants/tab-destinations.test.ts",
     "web:export": "expo export --platform web"
   },
   "dependencies": {
